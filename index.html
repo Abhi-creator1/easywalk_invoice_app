@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Easy Walk – Invoice App</title>
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2457a7" />
+  <script src="https://accounts.google.com/gsi/client"></script>
+
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <img src="assets/logo.png" alt="Easy Walk Logo" class="logo" />
+    </div>
+    <div class="header-right">
+      <h1>EASYWALK</h1>
+      <p>Physical Therapy Rehabilitation</p>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="app-container">
+    <h2>Invoice</h2>
+
+    <form id="invoice-form">
+
+  <!-- INVOICE META -->
+  <section class="card">
+    <div class="row">
+      <div>
+        <label>Invoice Number</label>
+        <input type="text" id="invoiceNumber" readonly />
+      </div>
+      <div>
+        <label>Invoice Date</label>
+        <input type="date" id="invoiceDate" />
+      </div>
+    </div>
+  </section>
+
+  <!-- CUSTOMER DETAILS -->
+  <section class="card">
+    <h3>Customer Details</h3>
+    <label>Name *</label>
+    <input type="text" id="customerName" required />
+    <label>Age</label>
+    <input type="number" id="customerAge" min="0" />
+
+      <label>Gender</label>
+      <select id="customerGender">
+        <option value="">Select</option>
+        <option>Male</option>
+        <option>Female</option>
+        <option>Other</option>
+      </select>
+    <label>Phone</label>
+    <input type="text" id="customerPhone" />
+
+    <label>Address</label>
+    <textarea id="customerAddress"></textarea>
+  </section>
+
+  <!-- LINE ITEMS -->
+  <section class="card">
+    <h3>Services</h3>
+
+    <table id="itemsTable">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Qty</th>
+          <th>Rate (₹)</th>
+          <th>Amount (₹)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <button type="button" id="addItemBtn">+ Add Item</button>
+  </section>
+
+  <!-- TOTALS -->
+  <section class="card totals">
+  <div class="totals-row">
+    <span>Subtotal</span>
+    <span id="subtotal">₹ 0.00</span>
+  </div>
+
+  <div class="totals-row">
+    <span>CGST (%)</span>
+    <input type="number" id="cgst" value="0" min="0" />
+  </div>
+
+  <div class="totals-row">
+    <span>SGST (%)</span>
+    <input type="number" id="sgst" value="0" min="0" />
+  </div>
+
+  <div class="totals-row">
+    <span>GST (<span id="gstPercent">0</span>%)</span>
+    <span id="gstAmount">₹ 0.00</span>
+  </div>
+
+  <div class="totals-row total">
+    <span>Total</span>
+    <span id="total">₹ 0.00</span>
+  </div>
+
+  <div class="totals-row">
+    <span>Paid</span>
+    <input type="number" id="paidAmount" value="0" min="0" />
+  </div>
+
+  <div class="totals-row total">
+    <span>Balance</span>
+    <span id="balance">₹ 0.00</span>
+  </div>
+  </section>
+
+
+  <!-- ACTIONS -->
+  <section class="actions">
+    <button type="submit">Save Invoice</button>
+  </section>
+
+    </form>
+    <!-- INVOICE PREVIEW (for PDF) -->
+        <div id="invoice-preview" class="invoice-preview">
+          <div class="invoice-header">
+          <div class="invoice-header-left">
+            <img src="assets/logo.png" class="invoice-logo" />
+            <div>
+              <h2>EASY WALK</h2>
+              <p>Physical Therapy Rehabilitation</p>
+            </div>
+          </div>
+
+          <div class="invoice-title">INVOICE</div>
+        </div>
+
+
+        <hr />
+        <div class="invoice-meta">
+        <div class="meta-left">
+          <strong>Billed To:</strong><br />
+          <span id="p-customerName"></span><br />
+          Age: <span id="p-customerAge"></span>,
+          Gender: <span id="p-customerGender"></span><br />
+          <span id="p-customerPhone"></span><br />
+          <span id="p-customerAddress"></span>
+        </div>
+
+        <div class="meta-right">
+          <strong>Invoice No:</strong> <span id="p-invoiceNumber"></span><br />
+          <strong>Date:</strong> <span id="p-invoiceDate"></span>
+        </div>
+      </div>
+
+        <table class="invoice-table">
+            <thead>
+            <tr>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Rate (₹)</th>
+                <th>Amount (₹)</th>
+            </tr>
+            </thead>
+            <tbody id="p-items"></tbody>
+        </table>
+
+        <div class="invoice-totals">
+            <div>Subtotal: <span id="p-subtotal"></span></div>
+            <div>GST (<span id="p-gstPercent"></span>%) : <span id="p-gstAmount"></span></div>
+            <div style="margin-left:20px;">CGST (<span id="p-cgst"></span>%)</div>
+            <div style="margin-left:20px;">SGST (<span id="p-sgst"></span>%)</div>
+            <div>Paid: <span id="p-paid"></span></div>
+            <div class="grand-total">Balance: <span id="p-balance"></span></div>
+
+        </div>
+        <div class="declaration">
+        <p>We declare that Physiotherapy Treatment has been undertaken at our Rehabilitation Centre.</p>
+        <p>We declare that the invoice shows actual price and that all particulars herein are true and correct.</p>
+        <br />
+        <strong>For EasyWalk Physiotherapy Rehabilitation Centre</strong><br /><br />
+        <br />
+        (Proprietor / Authorised Signatory)
+        </div>
+
+        <div class="invoice-footer">
+        EasyWalk Physiotherapy & Rehabilitation Centre, 
+        Prabhu Business Centre, Ravishankar Marg, Wadala, Nashik, 422006<br />
+        PAN: KFJPS7319J, UDYAM: MH-23-0153661<br />
+        Ph: +91 7972187511, E-mail: easywalkrehabnsk@gmail.com<br />
+        Web: http://easywalkphysiorehab.com, Insta: @easywalk_physio_rehabilitation
+        </div>
+
+        </div>
+
+        <button id="downloadPdfBtn">Download PDF</button>
+        <button id="backupDriveBtn">Backup to Google Drive</button>
+        <button id="syncLedgerBtn">Sync Ledger (Google Sheets)</button>
+
+        <!-- INVOICE HISTORY -->
+        <section class="card">
+        <h3>Invoice History</h3>
+
+        <table id="historyTable">
+            <thead>
+            <tr>
+                <th>Invoice No</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Total (₹)</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        </section>
+
+
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="app-footer">
+    <p>© Easy Walk Physical Therapy Rehabilitation</p>
+  </footer>
+
+  
+
+  <!-- JS FILES -->
+  <script src="js/html2pdf.bundle.min.js"></script>
+  <script src="js/dexie.min.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/invoice.js"></script>
+  <script src="js/driveBackup.js"></script>
+  <script src="js/pdf.js"></script>
+  <script src="js/sheetsSync.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/ui.js"></script> <!-- This should be last -->
+
+
+  <script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js")
+      .then(() => console.log("Service Worker registered"))
+      .catch(err => console.error("SW registration failed", err));
+    }
+    </script>
+
+</body>
+</html>
