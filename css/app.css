@@ -147,14 +147,6 @@ button {
 button:hover {
   opacity: 0.9;
 }
-
-#backupDriveBtn {
-  display: block;
-  margin: 20px 0;
-  background-color: #2457a7;
-  color: white;
-}
-
 /* =========================
    TOTALS (FORM)
 ========================= */
@@ -188,7 +180,7 @@ button:hover {
 .invoice-preview {
   width: 210mm;
   height: auto;          /* Default for on-screen preview */
-  padding: 15mm;
+  padding: 0;
   padding-bottom: 30mm;  /* Space reserved for footer */
   box-sizing: border-box;
   background: #ffffff;
@@ -282,7 +274,6 @@ button:hover {
   font-size: 13px;
 }
 
-/* ---------- Footer ---------- */
 /* ---------- Footer ---------- */
 .invoice-footer {
   position: absolute;

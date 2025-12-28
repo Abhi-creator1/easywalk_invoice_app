@@ -24,6 +24,7 @@ function addItemRow() {
 
   row.innerHTML = `
     <td><input type="text" class="desc" /></td>
+    <td><input type="text" class="duration" placeholder="1hr" /></td> <!-- Added Duration Input -->
     <td><input type="number" class="qty" value="1" min="1" /></td>
     <td><input type="number" class="rate" value="0" min="0" /></td>
     <td class="amount">₹ 0.00</td>
@@ -111,6 +112,7 @@ function populatePreview(invoice) {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${item.description}</td>
+      <td>${item.duration}</td> <!-- Added Duration to Preview -->
       <td>${item.quantity}</td>
       <td>${formatINR(item.rate)}</td>
       <td>${formatINR(item.amount)}</td>
@@ -134,9 +136,11 @@ document.getElementById("invoice-form").addEventListener("submit", async (e) => 
     const qty = Number(row.querySelector(".qty").value) || 0;
     const rate = Number(row.querySelector(".rate").value) || 0;
     const amount = qty * rate;
+    const duration = row.querySelector(".duration").value || "1hr";  // Added Duration
 
     items.push({
       description: row.querySelector(".desc").value,
+      duration: duration,  // Storing Duration
       quantity: qty,
       rate: rate,
       amount: amount
