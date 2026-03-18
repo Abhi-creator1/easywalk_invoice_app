@@ -96,6 +96,7 @@ function populatePreview(invoice) {
   setText("p-customerGender", invoice.customer.gender || "-");
   setText("p-customerPhone", invoice.customer.phone);
   setText("p-customerAddress", invoice.customer.address);
+  setText("p-treatment", invoice.treatment || "-");
 
   setText("p-subtotal", formatINR(invoice.subtotal));
   setText("p-gstPercent", invoice.cgst + invoice.sgst);
@@ -167,6 +168,7 @@ document.getElementById("invoice-form").addEventListener("submit", async (e) => 
       age: document.getElementById("customerAge").value,
       gender: document.getElementById("customerGender").value
     },
+    treatment: document.getElementById("treatment").value,
 
     items,
     subtotal,
