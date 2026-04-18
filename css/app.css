@@ -362,3 +362,8 @@ button:hover {
     print-color-adjust: exact;
   }
 }
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
