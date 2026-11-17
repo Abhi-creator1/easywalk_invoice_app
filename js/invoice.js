@@ -1,174 +1,193 @@
 // =======================
 // ELEMENT REFERENCES
 // =======================
+const invoiceForm = document.getElementById("invoice-form");
 const itemsTableBody = document.querySelector("#itemsTable tbody");
 const addItemBtn = document.getElementById("addItemBtn");
 
 // =======================
-// UTILITIES
-// =======================
-function formatINR(amount) {
-  return "₹ " + amount.toFixed(2);
-}
-
-function setText(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.innerText = value;
-}
-
-function sanitizeFilenamePart(str) {
-  return (str || "").trim().replace(/[\\/:*?"<>|]+/g, "_").replace(/\s+/g, "_") || "Invoice";
-}
-
-// =======================
 // LINE ITEMS (Treatment Dates)
 // =======================
-function addItemRow() {
+// Each row owns a Set of ISO dates. The chips and the stored range/single
+// entries are both derived from it, so there is one source of truth per row.
+const rowDateSelections = new WeakMap();
+
+function rowDates(row) {
+  if (!rowDateSelections.has(row)) rowDateSelections.set(row, new Set());
+  return rowDateSelections.get(row);
+}
+
+function setRowDates(row, dates) {
+  rowDateSelections.set(row, new Set(dates));
+  renderRowChips(row);
+  syncRowSessions(row);
+  calculateTotals();
+}
+
+function renderRowChips(row) {
+  const host = row.querySelector(".date-chips");
+  const entries = datesToEntries(rowDates(row));
+
+  if (entries.length === 0) {
+    host.innerHTML = '<span class="date-empty">No dates selected yet</span>';
+    return;
+  }
+
+  host.innerHTML = entries.map((entry, index) =>
+    '<span class="date-chip">' + escapeHtml(formatDateEntry(entry)) +
+    '<button type="button" class="remove-chip" data-index="' + index +
+    '" aria-label="Remove these dates">&#10005;</button></span>').join("");
+}
+
+// "No. of Sessions" follows the number of dates picked, which is what it means
+// in practice. It stops following as soon as the user types in the field
+// themselves, so an unusual invoice can still be entered by hand.
+function syncRowSessions(row) {
+  const qtyInput = row.querySelector(".qty");
+  if (row.dataset.qtyManual === "1") return;
+  const count = rowDates(row).size;
+  if (count > 0) qtyInput.value = count;
+}
+
+function addItemRow(prefill) {
+  const data = prefill || {};
   const row = document.createElement("tr");
 
   row.innerHTML = `
     <td class="dates-cell">
       <div class="date-chips"></div>
-      <div class="date-add-row">
-        <input type="date" class="date-input" />
-        <button type="button" class="add-date-btn">+ Add Date</button>
+      <div class="date-controls">
+        <button type="button" class="pick-dates-btn">&#128197; Select dates</button>
       </div>
-      <div class="date-add-row">
-        <input type="date" class="range-from-input" />
-        <span>to</span>
-        <input type="date" class="range-to-input" />
-        <button type="button" class="add-range-btn">+ Add Range</button>
-      </div>
+      <input type="text" class="date-manual" placeholder="or type: 3/11/25, 7/11/25, 10/11/25 - 14/11/25" />
+      <p class="date-manual-error" hidden></p>
     </td>
     <td><input type="text" class="duration" placeholder="1hr" /></td>
-    <td><input type="number" class="qty" value="1" min="1" /></td>
+    <td><input type="number" class="qty" value="1" min="0" /></td>
     <td><input type="number" class="rate" value="0" min="0" /></td>
     <td class="amount">₹ 0.00</td>
-    <td><button type="button" class="remove">✕</button></td>
+    <td><button type="button" class="remove" aria-label="Remove this row">&#10005;</button></td>
   `;
 
-  row.querySelectorAll(".qty, .rate").forEach(input => {
-    input.addEventListener("input", calculateTotals);
+  row.querySelector(".duration").value = data.duration || "";
+  if (data.quantity !== undefined) {
+    row.querySelector(".qty").value = data.quantity;
+    row.dataset.qtyManual = "1";   // a saved value must not be overwritten
+  }
+  if (data.rate !== undefined) row.querySelector(".rate").value = data.rate;
+
+  row.querySelector(".rate").addEventListener("input", calculateTotals);
+  row.querySelector(".qty").addEventListener("input", () => {
+    row.dataset.qtyManual = "1";
+    calculateTotals();
   });
 
-  row.querySelector(".add-date-btn").addEventListener("click", () => {
-    const dateInput = row.querySelector(".date-input");
-    if (!dateInput.value) return;
-    addDateChip(row, dateInput.value);
-    dateInput.value = "";
+  row.querySelector(".pick-dates-btn").addEventListener("click", event => {
+    openDatePicker({
+      anchorEl: event.currentTarget,
+      dates: rowDates(row),
+      onChange: dates => setRowDates(row, dates)
+    });
   });
 
-  row.querySelector(".add-range-btn").addEventListener("click", () => {
-    const fromInput = row.querySelector(".range-from-input");
-    const toInput = row.querySelector(".range-to-input");
-    if (!fromInput.value || !toInput.value) return;
-    if (toInput.value < fromInput.value) {
-      alert("Range end date must be on or after the start date.");
+  // Chip removal, delegated so it survives re-rendering.
+  row.querySelector(".date-chips").addEventListener("click", event => {
+    const button = event.target.closest(".remove-chip");
+    if (!button) return;
+    const entries = datesToEntries(rowDates(row));
+    const entry = entries[Number(button.dataset.index)];
+    if (!entry) return;
+
+    const remaining = new Set(rowDates(row));
+    entriesToDates([entry]).forEach(iso => remaining.delete(iso));
+    setRowDates(row, remaining);
+  });
+
+  const manualInput = row.querySelector(".date-manual");
+  const manualError = row.querySelector(".date-manual-error");
+
+  function commitManualEntry() {
+    const text = manualInput.value.trim();
+    if (!text) {
+      manualError.hidden = true;
       return;
     }
-    addRangeChip(row, fromInput.value, toInput.value);
-    fromInput.value = "";
-    toInput.value = "";
+
+    const parsed = parseManualDates(text);
+    const merged = new Set(rowDates(row));
+    parsed.dates.forEach(iso => merged.add(iso));
+
+    if (parsed.errors.length > 0) {
+      manualError.hidden = false;
+      manualError.textContent = "Could not read: " + parsed.errors.join(", ");
+    } else {
+      manualError.hidden = true;
+      manualInput.value = "";
+    }
+
+    if (parsed.dates.size > 0) setRowDates(row, merged);
+  }
+
+  manualInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitManualEntry();
+    }
   });
+  manualInput.addEventListener("blur", commitManualEntry);
 
   row.querySelector(".remove").addEventListener("click", () => {
     row.remove();
+    if (itemsTableBody.children.length === 0) addItemRow();
     calculateTotals();
   });
 
   itemsTableBody.appendChild(row);
-}
 
-const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"];
+  if (data.dates) rowDateSelections.set(row, entriesToDates(data.dates));
+  renderRowChips(row);
+  if (data.quantity === undefined) syncRowSessions(row);
 
-function formatChipDate(isoDate) {
-  const [y, m, d] = isoDate.split("-");
-  return `${d}/${m}/${y.slice(2)}`;
-}
-
-function isFirstDayOfMonth(isoDate) {
-  return Number(isoDate.split("-")[2]) === 1;
-}
-
-function isLastDayOfMonth(isoDate) {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  return new Date(y, m, 0).getDate() === d;
-}
-
-function formatMonthYear(isoDate) {
-  const [y, m] = isoDate.split("-").map(Number);
-  return `${MONTH_NAMES[m - 1]} ${y}`;
-}
-
-function formatRangeLabel(fromIso, toIso) {
-  if (isFirstDayOfMonth(fromIso) && isLastDayOfMonth(toIso)) {
-    const fromLabel = formatMonthYear(fromIso);
-    const toLabel = formatMonthYear(toIso);
-    return fromLabel === toLabel ? fromLabel : `${fromLabel} - ${toLabel}`;
-  }
-  return `${formatChipDate(fromIso)} - ${formatChipDate(toIso)}`;
-}
-
-function addDateChip(row, isoDate) {
-  const chip = document.createElement("span");
-  chip.className = "date-chip";
-  chip.dataset.type = "single";
-  chip.dataset.date = isoDate;
-  chip.innerHTML = `${formatChipDate(isoDate)} <button type="button" class="remove-chip">✕</button>`;
-
-  chip.querySelector(".remove-chip").addEventListener("click", () => chip.remove());
-
-  row.querySelector(".date-chips").appendChild(chip);
-}
-
-function addRangeChip(row, fromIso, toIso) {
-  const chip = document.createElement("span");
-  chip.className = "date-chip";
-  chip.dataset.type = "range";
-  chip.dataset.from = fromIso;
-  chip.dataset.to = toIso;
-  chip.innerHTML = `${formatRangeLabel(fromIso, toIso)} <button type="button" class="remove-chip">✕</button>`;
-
-  chip.querySelector(".remove-chip").addEventListener("click", () => chip.remove());
-
-  row.querySelector(".date-chips").appendChild(chip);
-}
-
-function getRowDates(row) {
-  return [...row.querySelectorAll(".date-chip")].map(chip =>
-    chip.dataset.type === "range"
-      ? { type: "range", from: chip.dataset.from, to: chip.dataset.to }
-      : { type: "single", date: chip.dataset.date }
-  );
-}
-
-function formatDateEntry(entry) {
-  return entry.type === "range" ? formatRangeLabel(entry.from, entry.to) : formatChipDate(entry.date);
+  return row;
 }
 
 // =======================
 // CALCULATIONS
 // =======================
-function calculateTotals() {
+function collectItems() {
+  const items = [];
   let subtotal = 0;
 
-  document.querySelectorAll("#itemsTable tbody tr").forEach(row => {
-    const qty = Number(row.querySelector(".qty").value) || 0;
-    const rate = Number(row.querySelector(".rate").value) || 0;
-    const amount = qty * rate;
+  itemsTableBody.querySelectorAll("tr").forEach(row => {
+    const quantity = toNumber(row.querySelector(".qty").value);
+    const rate = toNumber(row.querySelector(".rate").value);
+    const amount = quantity * rate;
+
+    items.push({
+      dates: datesToEntries(rowDates(row)),
+      duration: row.querySelector(".duration").value || "1hr",
+      quantity,
+      rate,
+      amount
+    });
 
     row.querySelector(".amount").innerText = formatINR(amount);
     subtotal += amount;
   });
 
-  const cgst = Number(document.getElementById("cgst").value) || 0;
-  const sgst = Number(document.getElementById("sgst").value) || 0;
+  return { items, subtotal };
+}
+
+function calculateTotals() {
+  const { subtotal } = collectItems();
+
+  const cgst = toNumber(document.getElementById("cgst").value);
+  const sgst = toNumber(document.getElementById("sgst").value);
   const gstPercent = cgst + sgst;
   const gstAmount = subtotal * gstPercent / 100;
 
   const total = subtotal + gstAmount;
-  const paid = Number(document.getElementById("paidAmount").value) || 0;
+  const paid = toNumber(document.getElementById("paidAmount").value);
   const balance = total - paid;
 
   setText("subtotal", formatINR(subtotal));
@@ -176,75 +195,52 @@ function calculateTotals() {
   setText("gstAmount", formatINR(gstAmount));
   setText("total", formatINR(total));
   setText("balance", formatINR(balance));
+
+  return { subtotal, cgst, sgst, gstAmount, total, paid, balance };
 }
 
-// GST / Paid listeners
-["cgst", "sgst", "paidAmount"].forEach(id => {
-  document.getElementById(id).addEventListener("input", calculateTotals);
-});
-
-// Initial setup
-addItemRow();
-calculateTotals();
-addItemBtn.addEventListener("click", addItemRow);
-
-// =======================
-// IPD / OPD PATIENT LINKING
-// =======================
-document.getElementById("invoicePatientType").addEventListener("change", e => {
-  const isIpd = e.target.value === "IPD";
-  document.getElementById("invoicePatientPicker").style.display = isIpd ? "block" : "none";
-  document.getElementById("invoiceOpdNote").style.display = isIpd ? "none" : "block";
-});
-
-document.getElementById("invoicePatientSelect").addEventListener("change", async e => {
-  const patient = await db.patients.get(e.target.value);
-  if (!patient) return;
-  document.getElementById("customerName").value = patient.name || "";
-  document.getElementById("customerAge").value = patient.age || "";
-  document.getElementById("customerGender").value = patient.gender || "";
-  document.getElementById("customerPhone").value = patient.phone || "";
-  document.getElementById("customerAddress").value = patient.address || "";
-  document.getElementById("treatment").value = patient.diagnosis || "";
-  e.target.blur();
-});
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.innerText = value;
+}
 
 // =======================
 // PREVIEW
 // =======================
 function populatePreview(invoice) {
-  setText("p-invoiceNumber", invoice.invoiceNumber);
-  setText("p-invoiceDate", invoice.invoiceDate);
+  const customer = invoice.customer || {};
 
-  setText("p-customerName", invoice.customer.name);
-  setText("p-customerAge", invoice.customer.age || "-");
-  setText("p-customerGender", invoice.customer.gender || "-");
-  setText("p-customerPhone", invoice.customer.phone);
-  setText("p-customerAddress", invoice.customer.address);
+  setText("p-invoiceNumber", invoice.invoiceNumber);
+  setText("p-invoiceDate", formatDMY(invoice.invoiceDate));
+
+  setText("p-customerName", customer.name || "-");
+  setText("p-customerAge", customer.age || "-");
+  setText("p-customerGender", customer.gender || "-");
+  setText("p-customerPhone", customer.phone || "-");
+  setText("p-customerAddress", customer.address || "-");
   setText("p-treatment", invoice.treatment || "-");
 
   setText("p-subtotal", formatINR(invoice.subtotal));
-  setText("p-gstPercent", invoice.cgst + invoice.sgst);
+  setText("p-gstPercent", toNumber(invoice.cgst) + toNumber(invoice.sgst));
   setText("p-gstAmount", formatINR(invoice.gstAmount));
-  setText("p-cgst", invoice.cgst);
-  setText("p-sgst", invoice.sgst);
+  setText("p-cgst", toNumber(invoice.cgst));
+  setText("p-sgst", toNumber(invoice.sgst));
+  setText("p-total", formatINR(invoice.total));
   setText("p-paid", formatINR(invoice.paid));
   setText("p-balance", formatINR(invoice.balance));
 
   const itemsBody = document.getElementById("p-items");
-  itemsBody.innerHTML = "";
-
-  invoice.items.forEach(item => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${(item.dates || []).map(formatDateEntry).join(", ") || "-"}</td>
-      <td>${item.duration}</td>
-      <td>${item.quantity}</td>
-      <td>${formatINR(item.rate)}</td>
-      <td>${formatINR(item.amount)}</td>
-    `;
-    itemsBody.appendChild(row);
-  });
+  itemsBody.innerHTML = (invoice.items || []).map(item => {
+    const dates = Array.isArray(item.dates) ? item.dates : [];
+    const label = dates.map(formatDateEntry).join(", ") || "-";
+    return "<tr>" +
+      "<td>" + escapeHtml(label) + "</td>" +
+      "<td>" + escapeHtml(item.duration || "-") + "</td>" +
+      "<td>" + escapeHtml(item.quantity) + "</td>" +
+      "<td>" + formatINR(item.rate) + "</td>" +
+      "<td>" + formatINR(item.amount) + "</td>" +
+      "</tr>";
+  }).join("");
 
   document.getElementById("invoice-preview").style.display = "flex";
 }
@@ -253,65 +249,125 @@ async function generateInvoicePdf(invoice) {
   const preview = document.getElementById("invoice-preview");
   preview.style.display = "flex";
 
-  const opt = {
-    margin: 0,
-    filename: `${invoice.invoiceNumber}.pdf`,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 3 },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-  };
+  const filename = sanitizeFilenamePart(invoice.customer.name) + "_" +
+    sanitizeFilenamePart(invoice.invoiceNumber);
 
-  const pdf = await html2pdf().set(opt).from(preview).toPdf().get("pdf");
-  const arrayBuffer = pdf.output("arraybuffer");
+  return exportElementToPdf(preview, { filename, docType: "invoice" });
+}
 
-  const filename = `${sanitizeFilenamePart(invoice.customer.name)}_${sanitizeFilenamePart(invoice.invoiceNumber)}`;
-  return window.api.savePdf(new Uint8Array(arrayBuffer), "invoice", filename);
+// =======================
+// LOAD AN EXISTING INVOICE BACK INTO THE FORM
+// =======================
+function loadInvoiceIntoForm(invoice) {
+  const customer = invoice.customer || {};
+
+  invoiceForm.dataset.editing = invoice.invoiceNumber;
+  document.getElementById("invoiceNumber").value = invoice.invoiceNumber || "";
+  document.getElementById("invoiceDate").value = invoice.invoiceDate || "";
+
+  document.getElementById("invoicePatientType").value = invoice.patientType || "OPD";
+  document.getElementById("invoicePatientType").dispatchEvent(new Event("change"));
+  if (invoice.patientId) document.getElementById("invoicePatientSelect").value = invoice.patientId;
+
+  document.getElementById("customerName").value = customer.name || "";
+  document.getElementById("customerAge").value = customer.age || "";
+  document.getElementById("customerGender").value = customer.gender || "";
+  document.getElementById("customerPhone").value = customer.phone || "";
+  document.getElementById("customerAddress").value = customer.address || "";
+  document.getElementById("treatment").value = invoice.treatment || "";
+
+  document.getElementById("cgst").value = toNumber(invoice.cgst);
+  document.getElementById("sgst").value = toNumber(invoice.sgst);
+  document.getElementById("paidAmount").value = toNumber(invoice.paid);
+
+  itemsTableBody.innerHTML = "";
+  const items = Array.isArray(invoice.items) && invoice.items.length ? invoice.items : [{}];
+  items.forEach(item => addItemRow(item));
+
+  calculateTotals();
+  updateEditingBanner();
+  invoiceForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function clearInvoiceForm() {
+  delete invoiceForm.dataset.editing;
+  invoiceForm.reset();
+  itemsTableBody.innerHTML = "";
+  addItemRow();
+  document.getElementById("invoiceDate").valueAsDate = new Date();
+  document.getElementById("invoicePatientType").dispatchEvent(new Event("change"));
+  calculateTotals();
+  updateEditingBanner();
+  generateInvoiceNumber();
+}
+
+function updateEditingBanner() {
+  const banner = document.getElementById("invoiceEditingBanner");
+  if (!banner) return;
+  const editing = invoiceForm.dataset.editing;
+  banner.hidden = !editing;
+  if (editing) {
+    banner.querySelector("span").textContent = "Editing invoice " + editing;
+  }
 }
 
 // =======================
 // SAVE INVOICE
 // =======================
-document.getElementById("invoice-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
+invoiceForm.addEventListener("submit", async event => {
+  event.preventDefault();
 
-  let subtotal = 0;
-  const items = [];
-
-  document.querySelectorAll("#itemsTable tbody tr").forEach(row => {
-    const qty = Number(row.querySelector(".qty").value) || 0;
-    const rate = Number(row.querySelector(".rate").value) || 0;
-    const amount = qty * rate;
-    const duration = row.querySelector(".duration").value || "1hr";
-    const dates = getRowDates(row);
-
-    items.push({
-      dates,
-      duration,
-      quantity: qty,
-      rate: rate,
-      amount: amount
-    });
-
-    subtotal += amount;
-  });
-
-  const cgst = Number(document.getElementById("cgst").value) || 0;
-  const sgst = Number(document.getElementById("sgst").value) || 0;
-  const gstAmount = subtotal * (cgst + sgst) / 100;
-  const total = subtotal + gstAmount;
-  const paid = Number(document.getElementById("paidAmount").value) || 0;
-  const balance = total - paid;
-
-  const patientType = document.getElementById("invoicePatientType").value;
-  const patientId = patientType === "IPD" ? document.getElementById("invoicePatientSelect").value : null;
-
-  if (patientType === "IPD" && !patientId) {
-    alert("Please select an IPD patient, or add one under Patients (IPD).");
+  const invoiceNumberField = document.getElementById("invoiceNumber");
+  const invoiceNumber = invoiceNumberField.value.trim();
+  if (!invoiceNumber) {
+    toast("Enter an invoice number before saving.", "error");
+    invoiceNumberField.focus();
     return;
   }
 
+  const patientType = document.getElementById("invoicePatientType").value;
+  const patientId = patientType === "IPD"
+    ? document.getElementById("invoicePatientSelect").value
+    : null;
+
+  if (patientType === "IPD" && !patientId) {
+    toast("Select an IPD patient, or add one under Patients (IPD).", "error");
+    return;
+  }
+
+  const editing = invoiceForm.dataset.editing || "";
+
+  // If the suggested number was left untouched, consume it now so the counter
+  // actually advances and the next invoice gets _02.
+  let finalNumber = invoiceNumber;
+  if (!editing) {
+    const minted = await run(() => consumeInvoiceNumber(invoiceNumber), {
+      failure: "Could not assign an invoice number."
+    });
+    if (!minted.ok) return;
+    finalNumber = minted.value;
+    invoiceNumberField.value = finalNumber;
+  }
+
+  // Safety net for a hand-edited number: numbers are sequenced automatically
+  // now, but the field is still editable and saving over an existing invoice
+  // used to destroy it silently.
+  if (finalNumber !== editing) {
+    const clash = await db.invoices.get(finalNumber);
+    if (clash) {
+      const proceed = window.confirm(
+        "Invoice " + finalNumber + " already exists (" +
+        (clash.customer && clash.customer.name ? clash.customer.name : "unknown") + ", " +
+        formatINR(clash.total) + ").\n\nSaving will replace it. Continue?");
+      if (!proceed) return;
+    }
+  }
+
+  const { items, subtotal } = collectItems();
+  const totals = calculateTotals();
+
   const invoice = {
-    invoiceNumber: document.getElementById("invoiceNumber").value,
+    invoiceNumber: finalNumber,
     invoiceDate: document.getElementById("invoiceDate").value,
     patientType,
     patientId,
@@ -327,33 +383,93 @@ document.getElementById("invoice-form").addEventListener("submit", async (e) => 
 
     items,
     subtotal,
-    cgst,
-    sgst,
-    gstAmount,
-    total,
-    paid,
-    balance,
+    cgst: totals.cgst,
+    sgst: totals.sgst,
+    gstAmount: totals.gstAmount,
+    total: totals.total,
+    paid: totals.paid,
+    balance: totals.balance,
 
     currency: "INR",
     createdAt: new Date().toISOString()
   };
 
-  await db.invoices.put(invoice);
+  const saved = await run(async () => {
+    await db.invoices.put(invoice);
 
-  if (patientType === "IPD" && patientId) {
-    await db.patients.linkDocument({
-      patientId,
-      docType: "invoice",
-      docNumber: invoice.invoiceNumber,
-      date: invoice.invoiceDate || invoice.createdAt.slice(0, 10),
-      amount: total
-    });
-    if (typeof loadPatients === "function") await loadPatients();
-  }
+    if (patientType === "IPD" && patientId) {
+      await db.patients.linkDocument({
+        patientId,
+        docType: "invoice",
+        docNumber: invoice.invoiceNumber,
+        date: invoice.invoiceDate || invoice.createdAt.slice(0, 10),
+        amount: invoice.total
+      });
+      if (typeof loadPatients === "function") await loadPatients();
+    }
+  }, { failure: "The invoice could not be saved." });
+
+  if (!saved.ok) return;
 
   populatePreview(invoice);
-  const filePath = await generateInvoicePdf(invoice);
-  loadInvoiceHistory();
 
-  alert(`Invoice saved and PDF exported to:\n${filePath}`);
+  const pdf = await run(() => generateInvoicePdf(invoice), {
+    failure: "The invoice was saved, but the PDF could not be created."
+  });
+
+  await run(() => loadInvoiceHistory(), { failure: "Could not refresh the invoice list." });
+
+  delete invoiceForm.dataset.editing;
+  updateEditingBanner();
+
+  if (pdf.ok) {
+    toast("Invoice " + invoice.invoiceNumber + " saved. PDF downloaded: " + pdf.value, "success", 6000);
+  }
+
+  // The field now shows what the *next* invoice will be numbered.
+  invoiceForm.dataset.savedNumber = invoice.invoiceNumber;
+  generateInvoiceNumber();
 });
+
+// =======================
+// IPD / OPD PATIENT LINKING
+// =======================
+document.getElementById("invoicePatientType").addEventListener("change", event => {
+  const isIpd = event.target.value === "IPD";
+  document.getElementById("invoicePatientPicker").style.display = isIpd ? "block" : "none";
+  document.getElementById("invoiceOpdNote").style.display = isIpd ? "none" : "block";
+});
+
+document.getElementById("invoicePatientSelect").addEventListener("change", async event => {
+  if (!event.target.value) return;
+  const result = await run(() => db.patients.get(event.target.value), {
+    failure: "Could not load that patient."
+  });
+  const patient = result.value;
+  if (!patient) return;
+
+  document.getElementById("customerName").value = patient.name || "";
+  document.getElementById("customerAge").value = patient.age || "";
+  document.getElementById("customerGender").value = patient.gender || "";
+  document.getElementById("customerPhone").value = patient.phone || "";
+  document.getElementById("customerAddress").value = patient.address || "";
+  document.getElementById("treatment").value = patient.diagnosis || "";
+  event.target.blur();
+});
+
+// =======================
+// INITIAL SETUP
+// =======================
+["cgst", "sgst", "paidAmount"].forEach(id => {
+  document.getElementById(id).addEventListener("input", calculateTotals);
+});
+
+addItemBtn.addEventListener("click", () => addItemRow());
+
+document.getElementById("invoiceClearBtn").addEventListener("click", () => {
+  if (itemsTableBody.children.length && !window.confirm("Clear the form and start a new invoice?")) return;
+  clearInvoiceForm();
+});
+
+addItemRow();
+calculateTotals();

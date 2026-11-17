@@ -2,23 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>EasyWalk – Documentation</title>
 
-  <!-- Main CSS -->
+  <!-- The app is wholly self-contained: no external scripts, styles, fonts or
+       network calls. Saying so explicitly means a compromised or mistyped URL
+       cannot pull anything in. 'unsafe-inline' is needed for style-src only,
+       because of the style="..." attributes in this file; scripts are all
+       separate files, so script-src stays strict. blob: and data: are for the
+       canvas and PDF that html2pdf builds in memory. -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob:;
+    font-src 'self';
+    connect-src 'self';
+    object-src 'none';
+    frame-src 'none';
+    base-uri 'self';
+    form-action 'none'" />
+
   <link rel="stylesheet" href="css/app.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="assets/logo.png" />
+  <link rel="apple-touch-icon" href="assets/logo.png" />
   <meta name="theme-color" content="#2457a7" />
+  <!-- The documents are white paper; never let the OS invert them. -->
+  <meta name="color-scheme" content="light" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="EasyWalk" />
 </head>
 <body>
 
   <!-- HEADER -->
   <header class="app-header">
     <div class="header-left">
-      <img src="assets/logo.png" alt="Easy Walk Logo" class="logo" />
+      <img src="assets/logo.png" alt="EasyWalk logo" class="logo" />
     </div>
     <div class="header-right">
       <h1>EASYWALK</h1>
-      <p>Physical Therapy Rehabilitation</p>
+      <p>Physiotherapy &amp; Rehabilitation</p>
     </div>
   </header>
 
@@ -39,236 +64,227 @@
          INVOICE VIEW
     ======================================================== -->
     <section id="view-invoice" class="view active">
-    <h2>Invoice</h2>
+      <h2>Invoice</h2>
 
-    <form id="invoice-form">
+      <form id="invoice-form">
 
-  <!-- INVOICE META -->
-  <section class="card">
-    <div class="row">
-      <div>
-        <label>Invoice Number</label>
-        <input type="text" id="invoiceNumber" />
-      </div>
-      <div>
-        <label>Invoice Date</label>
-        <input type="date" id="invoiceDate" />
-      </div>
-    </div>
-  </section>
+        <p class="editing-banner" id="invoiceEditingBanner" hidden>
+          <span></span>
+        </p>
 
-  <!-- PATIENT TYPE -->
-  <section class="card">
-    <label>Patient Type</label>
-    <select id="invoicePatientType">
-      <option value="OPD">OPD</option>
-      <option value="IPD">IPD</option>
-    </select>
-
-    <p id="invoiceOpdNote" class="patient-type-note">OPD — no profile needed, fill details below.</p>
-
-    <div id="invoicePatientPicker" class="patient-picker" style="display:none;">
-      <label>Select IPD Patient</label>
-      <select id="invoicePatientSelect">
-        <option value="">-- Select Patient --</option>
-      </select>
-      <button type="button" class="link-btn" data-goto="patients">+ New IPD Patient</button>
-    </div>
-  </section>
-
-  <!-- CUSTOMER DETAILS -->
-  <section class="card">
-    <h3>Customer Details</h3>
-    <label>Name *</label>
-    <input type="text" id="customerName" required />
-    <label>Age</label>
-    <input type="number" id="customerAge" min="0" />
-
-      <label>Gender</label>
-      <select id="customerGender">
-        <option value="">Select</option>
-        <option>Male</option>
-        <option>Female</option>
-        <option>Other</option>
-      </select>
-    <label>Phone</label>
-    <input type="text" id="customerPhone" />
-
-    <label>Address</label>
-    <textarea id="customerAddress"></textarea>
-  </section>
-
-  <!-- DIAGNOSIS / TREATMENT -->
-  <section class="card">
-    <h3>Diagnosis / Treatment</h3>
-    <textarea id="treatment" placeholder="Enter diagnosis or treatment details"></textarea>
-  </section>
-
-  <!-- LINE ITEMS -->
-  <section class="card">
-    <h3>Services</h3>
-
-    <div class="table-wrapper">
-      <table id="itemsTable">
-        <thead>
-          <tr>
-            <th>Treatment Dates</th>
-            <th>Duration</th>   <!-- Added Duration Column -->
-            <th>No. of Sessions</th>  <!-- Renamed Qty to No. of Sessions -->
-            <th>Rate (₹)</th>
-            <th>Amount (₹)</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-        </table>
-      </div>
-
-
-    <button type="button" id="addItemBtn">+ Add Item</button>
-  </section>
-
-  <!-- TOTALS -->
-  <section class="card totals">
-  <div class="totals-row">
-    <span>Subtotal</span>
-    <span id="subtotal">₹ 0.00</span>
-  </div>
-
-  <div class="totals-row">
-    <span>CGST (%)</span>
-    <input type="number" id="cgst" value="0" min="0" />
-  </div>
-
-  <div class="totals-row">
-    <span>SGST (%)</span>
-    <input type="number" id="sgst" value="0" min="0" />
-  </div>
-
-  <div class="totals-row">
-    <span>GST (<span id="gstPercent">0</span>%)</span>
-    <span id="gstAmount">₹ 0.00</span>
-  </div>
-
-  <div class="totals-row total">
-    <span>Total</span>
-    <span id="total">₹ 0.00</span>
-  </div>
-
-  <div class="totals-row">
-    <span>Paid</span>
-    <input type="number" id="paidAmount" value="0" min="0" />
-  </div>
-
-  <div class="totals-row total">
-    <span>Balance</span>
-    <span id="balance">₹ 0.00</span>
-  </div>
-  </section>
-
-
-  <!-- ACTIONS -->
-  <section class="actions">
-    <button type="submit">Save Invoice</button>
-  </section>
-
-    </form>
-    <!-- INVOICE PREVIEW (for PDF) -->
-        <div id="invoice-preview" class="invoice-preview">
-          <div class="invoice-header">
-          <div class="invoice-header-left">
-            <img src="assets/logo.png" class="invoice-logo" />
+        <!-- INVOICE META -->
+        <section class="card">
+          <div class="row">
             <div>
-              <h2>EASYWALK</h2>
-              <p>Physiotherapy Therapy & Rehabilitation</p>
+              <label for="invoiceNumber">Invoice Number</label>
+              <input type="text" id="invoiceNumber" />
+            </div>
+            <div>
+              <label for="invoiceDate">Invoice Date</label>
+              <input type="date" id="invoiceDate" />
+            </div>
+          </div>
+          <p class="field-note">The number is suggested automatically and only used up when you save. You can still type your own.</p>
+        </section>
+
+        <!-- PATIENT TYPE -->
+        <section class="card">
+          <label for="invoicePatientType">Patient Type</label>
+          <select id="invoicePatientType">
+            <option value="OPD">OPD</option>
+            <option value="IPD">IPD</option>
+          </select>
+
+          <p id="invoiceOpdNote" class="patient-type-note">OPD — no profile needed, fill details below.</p>
+
+          <div id="invoicePatientPicker" class="patient-picker" style="display:none;">
+            <label for="invoicePatientSelect">Select IPD Patient</label>
+            <select id="invoicePatientSelect">
+              <option value="">-- Select Patient --</option>
+            </select>
+            <button type="button" class="link-btn" data-goto="patients">+ New IPD Patient</button>
+          </div>
+        </section>
+
+        <!-- CUSTOMER DETAILS -->
+        <section class="card">
+          <h3>Customer Details</h3>
+          <label for="customerName">Name *</label>
+          <input type="text" id="customerName" required />
+          <div class="row">
+            <div>
+              <label for="customerAge">Age</label>
+              <input type="number" id="customerAge" min="0" />
+            </div>
+            <div>
+              <label for="customerGender">Gender</label>
+              <select id="customerGender">
+                <option value="">Select</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <label for="customerPhone">Phone</label>
+          <input type="text" id="customerPhone" />
+
+          <label for="customerAddress">Address</label>
+          <textarea id="customerAddress"></textarea>
+        </section>
+
+        <!-- DIAGNOSIS / TREATMENT -->
+        <section class="card">
+          <h3>Diagnosis / Treatment</h3>
+          <textarea id="treatment" placeholder="Enter diagnosis or treatment details"></textarea>
+        </section>
+
+        <!-- LINE ITEMS -->
+        <section class="card">
+          <h3>Services</h3>
+
+          <div class="table-wrapper">
+            <table id="itemsTable">
+              <thead>
+                <tr>
+                  <th>Treatment Dates</th>
+                  <th>Duration</th>
+                  <th>No. of Sessions</th>
+                  <th>Rate (₹)</th>
+                  <th>Amount (₹)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <button type="button" id="addItemBtn">+ Add Item</button>
+        </section>
+
+        <!-- TOTALS -->
+        <section class="card totals">
+          <div class="totals-row">
+            <span>Subtotal</span>
+            <span id="subtotal">₹ 0.00</span>
+          </div>
+
+          <div class="totals-row">
+            <span>CGST (%)</span>
+            <input type="number" id="cgst" value="0" min="0" />
+          </div>
+
+          <div class="totals-row">
+            <span>SGST (%)</span>
+            <input type="number" id="sgst" value="0" min="0" />
+          </div>
+
+          <div class="totals-row">
+            <span>GST (<span id="gstPercent">0</span>%)</span>
+            <span id="gstAmount">₹ 0.00</span>
+          </div>
+
+          <div class="totals-row total">
+            <span>Total</span>
+            <span id="total">₹ 0.00</span>
+          </div>
+
+          <div class="totals-row">
+            <span>Paid</span>
+            <input type="number" id="paidAmount" value="0" min="0" />
+          </div>
+
+          <div class="totals-row total">
+            <span>Balance</span>
+            <span id="balance">₹ 0.00</span>
+          </div>
+        </section>
+
+        <!-- ACTIONS -->
+        <section class="actions">
+          <button type="button" id="invoiceClearBtn" class="secondary">New / Clear</button>
+          <button type="submit">Save Invoice</button>
+        </section>
+
+      </form>
+
+      <!-- INVOICE PREVIEW (for PDF / print) -->
+      <div class="preview-scroll">
+        <div id="invoice-preview" class="invoice-preview">
+          <div class="invoice-header" id="p-invoiceHeader"></div>
+
+          <hr />
+
+          <div class="invoice-meta">
+            <div class="meta-left">
+              <strong>Billed To:</strong><br />
+              <span id="p-customerName"></span><br />
+              Age: <span id="p-customerAge"></span>,
+              Gender: <span id="p-customerGender"></span><br />
+              <span id="p-customerPhone"></span><br />
+              <span id="p-customerAddress"></span>
+            </div>
+
+            <div class="meta-right">
+              <strong>Invoice No:</strong> <span id="p-invoiceNumber"></span><br />
+              <strong>Date:</strong> <span id="p-invoiceDate"></span>
             </div>
           </div>
 
-          <div class="invoice-title">INVOICE</div>
-        </div>
+          <div class="invoice-treatment">
+            <strong>Diagnosis / Treatment:</strong><br />
+            <span id="p-treatment"></span>
+          </div>
 
-
-        <hr />
-        <div class="invoice-meta">
-        <div class="meta-left">
-          <strong>Billed To:</strong><br />
-          <span id="p-customerName"></span><br />
-          Age: <span id="p-customerAge"></span>,
-          Gender: <span id="p-customerGender"></span><br />
-          <span id="p-customerPhone"></span><br />
-          <span id="p-customerAddress"></span>
-        </div>
-
-        <div class="meta-right">
-          <strong>Invoice No:</strong> <span id="p-invoiceNumber"></span><br />
-          <strong>Date:</strong> <span id="p-invoiceDate"></span>
-        </div>
-      </div>
-        <div class="invoice-treatment">
-          <strong>Diagnosis / Treatment:</strong><br />
-          <span id="p-treatment"></span>
-        </div>
-
-        <table class="invoice-table">
+          <table class="invoice-table">
             <thead>
-            <tr>
+              <tr>
                 <th>Treatment Dates</th>
-                <th>Duration</th>   <!-- Added Duration Column -->
-                <th>No. of Sessions</th>  <!-- Renamed Qty to No. of Sessions -->
+                <th>Duration</th>
+                <th>No. of Sessions</th>
                 <th>Rate (₹)</th>
                 <th>Amount (₹)</th>
-            </tr>
+              </tr>
             </thead>
             <tbody id="p-items"></tbody>
-        </table>
+          </table>
 
-        <div class="invoice-totals">
+          <div class="invoice-totals">
             <div>Subtotal: <span id="p-subtotal"></span></div>
             <div>GST (<span id="p-gstPercent"></span>%) : <span id="p-gstAmount"></span></div>
-            <div style="margin-left:20px;">CGST (<span id="p-cgst"></span>%)</div>
-            <div style="margin-left:20px;">SGST (<span id="p-sgst"></span>%)</div>
+            <div class="gst-split">CGST (<span id="p-cgst"></span>%)</div>
+            <div class="gst-split">SGST (<span id="p-sgst"></span>%)</div>
+            <div class="grand-total">Total: <span id="p-total"></span></div>
             <div>Paid: <span id="p-paid"></span></div>
             <div class="grand-total">Balance: <span id="p-balance"></span></div>
+          </div>
 
+          <div class="declaration" id="p-declaration"></div>
+
+          <div class="invoice-footer" id="p-invoiceFooter"></div>
         </div>
-        <div class="declaration">
-        <p>We declare that Physiotherapy Treatment has been undertaken at our Rehabilitation Centre.</p>
-        <p>We declare that the invoice shows actual price and that all particulars herein are true and correct.</p>
-        <br />
-        <strong>For EasyWalk Physiotherapy Rehabilitation Centre</strong><br /><br />
-        <br />
-        (Proprietor / Authorised Signatory)
-        </div>
+      </div>
 
-        <div class="invoice-footer">
-        EasyWalk Physiotherapy & Rehabilitation Centre,
-        Prabhu Business Centre, Ravishankar Marg, Wadala, Nashik, 422006<br />
-        PAN: KFJPS7319J, UDYAM: MH-23-0153661<br />
-        Ph: +91 7972187511, E-mail: easywalkrehabnsk@gmail.com<br />
-        Web: http://easywalkphysiorehab.com, Insta: @easywalk_physio_rehabilitation
-        </div>
+      <button id="printDocBtn">Print Invoice</button>
 
-        </div>
-
-        <button id="printDocBtn">Print Document</button>
-
-        <!-- INVOICE HISTORY -->
-        <section class="card">
+      <!-- INVOICE HISTORY -->
+      <section class="card">
         <h3>Invoice History</h3>
-
-        <table id="historyTable">
+        <div class="table-wrapper">
+          <table id="historyTable">
             <thead>
-            <tr>
+              <tr>
                 <th>Invoice No</th>
                 <th>Date</th>
                 <th>Customer</th>
                 <th>Total (₹)</th>
                 <th>Action</th>
-            </tr>
+              </tr>
             </thead>
             <tbody></tbody>
-        </table>
-        </section>
+          </table>
+        </div>
+      </section>
 
     </section>
 
@@ -279,8 +295,10 @@
       <h2>Treatment Protocol</h2>
 
       <form id="protocol-form">
+        <p class="editing-banner" id="protocolEditingBanner" hidden><span></span></p>
+
         <section class="card">
-          <label>Patient Type</label>
+          <label for="protocolPatientType">Patient Type</label>
           <select id="protocolPatientType">
             <option value="OPD">OPD</option>
             <option value="IPD">IPD</option>
@@ -289,7 +307,7 @@
           <p id="protocolOpdNote" class="patient-type-note">OPD — no profile needed, fill details below.</p>
 
           <div id="protocolPatientPicker" class="patient-picker" style="display:none;">
-            <label>Select IPD Patient</label>
+            <label for="protocolPatientSelect">Select IPD Patient</label>
             <select id="protocolPatientSelect">
               <option value="">-- Select Patient --</option>
             </select>
@@ -299,15 +317,15 @@
 
         <section class="card">
           <h3>Patient Details</h3>
-          <label>Patient Name *</label>
+          <label for="protocolPatientName">Patient Name *</label>
           <input type="text" id="protocolPatientName" required />
           <div class="row">
             <div>
-              <label>Age</label>
+              <label for="protocolAge">Age</label>
               <input type="number" id="protocolAge" min="0" />
             </div>
             <div>
-              <label>Gender</label>
+              <label for="protocolGender">Gender</label>
               <select id="protocolGender">
                 <option value="">Select</option>
                 <option>Male</option>
@@ -316,17 +334,17 @@
               </select>
             </div>
           </div>
-          <label>Address</label>
+          <label for="protocolAddress">Address</label>
           <textarea id="protocolAddress"></textarea>
-          <label>Diagnosis</label>
+          <label for="protocolDiagnosis">Diagnosis</label>
           <textarea id="protocolDiagnosis"></textarea>
           <div class="row">
             <div>
-              <label>Date of Assessment</label>
+              <label for="protocolAssessmentDate">Date of Assessment</label>
               <input type="date" id="protocolAssessmentDate" />
             </div>
             <div>
-              <label>Treating Physiotherapist</label>
+              <label for="protocolPhysio">Treating Physiotherapist</label>
               <input type="text" id="protocolPhysio" />
             </div>
           </div>
@@ -349,30 +367,38 @@
           <h3>Sign &amp; Stamp</h3>
           <div class="row">
             <div>
-              <label>Sign by</label>
+              <label for="protocolSignBy">Sign by</label>
               <input type="text" id="protocolSignBy" />
             </div>
             <div>
-              <label>Position / Designation</label>
+              <label for="protocolDesignation">Position / Designation</label>
               <input type="text" id="protocolDesignation" />
             </div>
           </div>
         </section>
 
         <section class="actions">
+          <button type="button" id="protocolClearBtn" class="secondary">New / Clear</button>
           <button type="submit">Save Treatment Protocol</button>
         </section>
       </form>
 
-      <div id="protocol-preview" class="doc-preview"></div>
-      <button id="protocolDownloadBtn" style="display:none;">Download PDF</button>
+      <div class="preview-scroll">
+        <div id="protocol-preview" class="doc-preview"></div>
+      </div>
+      <div class="preview-actions">
+        <button id="protocolDownloadBtn" style="display:none;">Download PDF</button>
+        <button id="protocolPrintBtn" style="display:none;">Print</button>
+      </div>
 
       <section class="card">
         <h3>Treatment Protocol History</h3>
-        <table id="protocolHistoryTable">
-          <thead><tr><th>Doc No</th><th>Date</th><th>Patient</th><th>Type</th><th>Action</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-wrapper">
+          <table id="protocolHistoryTable">
+            <thead><tr><th>Doc No</th><th>Date</th><th>Patient</th><th>Type</th><th>Action</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
     </section>
 
@@ -383,8 +409,10 @@
       <h2>Certificate</h2>
 
       <form id="certificate-form">
+        <p class="editing-banner" id="certEditingBanner" hidden><span></span></p>
+
         <section class="card">
-          <label>Patient Type</label>
+          <label for="certPatientType">Patient Type</label>
           <select id="certPatientType">
             <option value="OPD">OPD</option>
             <option value="IPD">IPD</option>
@@ -393,7 +421,7 @@
           <p id="certOpdNote" class="patient-type-note">OPD — no profile needed, fill details below.</p>
 
           <div id="certPatientPicker" class="patient-picker" style="display:none;">
-            <label>Select IPD Patient</label>
+            <label for="certPatientSelect">Select IPD Patient</label>
             <select id="certPatientSelect">
               <option value="">-- Select Patient --</option>
             </select>
@@ -403,15 +431,15 @@
 
         <section class="card">
           <h3>Patient Details</h3>
-          <label>Patient Name *</label>
+          <label for="certPatientName">Patient Name *</label>
           <input type="text" id="certPatientName" required />
           <div class="row">
             <div>
-              <label>Age</label>
+              <label for="certAge">Age</label>
               <input type="number" id="certAge" min="0" />
             </div>
             <div>
-              <label>Gender</label>
+              <label for="certGender">Gender</label>
               <select id="certGender">
                 <option value="">Select</option>
                 <option>Male</option>
@@ -420,7 +448,7 @@
               </select>
             </div>
           </div>
-          <label>Diagnosis</label>
+          <label for="certDiagnosis">Diagnosis</label>
           <textarea id="certDiagnosis"></textarea>
         </section>
 
@@ -433,8 +461,9 @@
 
           <h3 style="margin-top:12px;">Certificate Text</h3>
           <textarea id="certBody" rows="6" placeholder="Enter the certificate wording..."></textarea>
+          <p class="field-note">Leave a blank line between paragraphs. Long certificates now flow onto extra pages instead of being cut off.</p>
 
-          <label>Date</label>
+          <label for="certDate">Date</label>
           <input type="date" id="certDate" />
         </section>
 
@@ -442,30 +471,38 @@
           <h3>Sign &amp; Stamp</h3>
           <div class="row">
             <div>
-              <label>Sign by</label>
+              <label for="certSignBy">Sign by</label>
               <input type="text" id="certSignBy" />
             </div>
             <div>
-              <label>Position / Designation</label>
+              <label for="certDesignation">Position / Designation</label>
               <input type="text" id="certDesignation" />
             </div>
           </div>
         </section>
 
         <section class="actions">
+          <button type="button" id="certClearBtn" class="secondary">New / Clear</button>
           <button type="submit">Save Certificate</button>
         </section>
       </form>
 
-      <div id="certificate-preview" class="doc-preview"></div>
-      <button id="certDownloadBtn" style="display:none;">Download PDF</button>
+      <div class="preview-scroll">
+        <div id="certificate-preview" class="doc-preview"></div>
+      </div>
+      <div class="preview-actions">
+        <button id="certDownloadBtn" style="display:none;">Download PDF</button>
+        <button id="certPrintBtn" style="display:none;">Print</button>
+      </div>
 
       <section class="card">
         <h3>Certificate History</h3>
-        <table id="certificateHistoryTable">
-          <thead><tr><th>Doc No</th><th>Date</th><th>Patient</th><th>Type</th><th>Action</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-wrapper">
+          <table id="certificateHistoryTable">
+            <thead><tr><th>Doc No</th><th>Date</th><th>Patient</th><th>Type</th><th>Action</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
     </section>
 
@@ -479,15 +516,15 @@
         <h3>New / Edit IPD Patient</h3>
         <form id="patient-form">
           <input type="hidden" id="patientId" />
-          <label>Name *</label>
+          <label for="patientName">Name *</label>
           <input type="text" id="patientName" required />
           <div class="row">
             <div>
-              <label>Age</label>
+              <label for="patientAge">Age</label>
               <input type="number" id="patientAge" min="0" />
             </div>
             <div>
-              <label>Gender</label>
+              <label for="patientGender">Gender</label>
               <select id="patientGender">
                 <option value="">Select</option>
                 <option>Male</option>
@@ -496,34 +533,34 @@
               </select>
             </div>
           </div>
-          <label>Phone</label>
+          <label for="patientPhone">Phone</label>
           <input type="text" id="patientPhone" />
-          <label>Address</label>
+          <label for="patientAddress">Address</label>
           <textarea id="patientAddress"></textarea>
-          <label>Diagnosis</label>
+          <label for="patientDiagnosis">Diagnosis</label>
           <textarea id="patientDiagnosis"></textarea>
           <div class="row">
             <div>
-              <label>Ward / Room</label>
+              <label for="patientWard">Ward / Room</label>
               <input type="text" id="patientWard" />
             </div>
             <div>
-              <label>Assigned Physiotherapist</label>
+              <label for="patientPhysio">Assigned Physiotherapist</label>
               <input type="text" id="patientPhysio" />
             </div>
           </div>
           <div class="row">
             <div>
-              <label>Admission Date</label>
+              <label for="patientAdmissionDate">Admission Date</label>
               <input type="date" id="patientAdmissionDate" />
             </div>
             <div>
-              <label>Discharge Date</label>
+              <label for="patientDischargeDate">Discharge Date</label>
               <input type="date" id="patientDischargeDate" />
             </div>
           </div>
           <section class="actions">
-            <button type="button" id="patientClearBtn">Clear</button>
+            <button type="button" id="patientClearBtn" class="secondary">Clear</button>
             <button type="submit">Save Patient</button>
           </section>
         </form>
@@ -532,20 +569,24 @@
       <section class="card">
         <h3>IPD Patient List</h3>
         <input type="text" id="patientSearch" placeholder="Search by name..." />
-        <table id="patientListTable">
-          <thead><tr><th>Name</th><th>Age/Gender</th><th>Ward</th><th>Admitted</th><th>Billing Total (₹)</th><th>Action</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-wrapper">
+          <table id="patientListTable">
+            <thead><tr><th>Name</th><th>Age/Gender</th><th>Ward</th><th>Admitted</th><th>Billing Total (₹)</th><th>Action</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="card" id="patientDetailCard" style="display:none;">
         <h3>Patient Detail</h3>
         <div id="patientDetailInfo"></div>
         <h4 style="margin-top:12px;">Linked Documents</h4>
-        <table id="patientDocsTable">
-          <thead><tr><th>Type</th><th>Doc No</th><th>Date</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-wrapper">
+          <table id="patientDocsTable">
+            <thead><tr><th>Type</th><th>Doc No</th><th>Date</th><th>Amount (₹)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
     </section>
 
@@ -557,16 +598,17 @@
       <p style="margin-bottom:12px;">For any one-off document that isn't covered by the app — still gets the EasyWalk header for the owner's sign &amp; stamp. Not saved to history.</p>
 
       <section class="card">
-        <label>Name of Document</label>
+        <label for="addDocName">Name of Document</label>
         <input type="text" id="addDocName" placeholder="e.g. Referral Letter" />
 
-        <label>Content</label>
+        <label for="addDocContent">Content</label>
         <textarea id="addDocContent" rows="10" placeholder="Enter the document content..."></textarea>
+        <p class="field-note">Leave a blank line between paragraphs so long documents can flow onto extra pages.</p>
 
-        <label>Sign by</label>
+        <label for="addDocSignBy">Sign by</label>
         <input type="text" id="addDocSignBy" placeholder="e.g. Dr. Name" />
 
-        <label>Position / Designation</label>
+        <label for="addDocDesignation">Position / Designation</label>
         <input type="text" id="addDocDesignation" placeholder="e.g. Proprietor, Physiotherapist" />
 
         <section class="actions">
@@ -574,8 +616,13 @@
         </section>
       </section>
 
-      <div id="additional-preview" class="doc-preview"></div>
-      <button id="addDocPrintBtn" style="display:none;">Print Document</button>
+      <div class="preview-scroll">
+        <div id="additional-preview" class="doc-preview"></div>
+      </div>
+      <div class="preview-actions">
+        <button id="addDocDownloadBtn" style="display:none;">Download PDF</button>
+        <button id="addDocPrintBtn" style="display:none;">Print</button>
+      </div>
     </section>
 
     <!-- =======================================================
@@ -585,26 +632,27 @@
       <h2>Settings</h2>
 
       <section class="card">
-        <h3>Storage Folders</h3>
-        <label>PDF Output Folder</label>
-        <div class="row">
-          <input type="text" id="pdfFolderPath" readonly />
-          <button type="button" id="pickPdfFolderBtn">Choose Folder</button>
-        </div>
-
-        <label>Backup Folder</label>
-        <div class="row">
-          <input type="text" id="backupFolderPath" readonly />
-          <button type="button" id="pickBackupFolderBtn">Choose Folder</button>
-        </div>
+        <h3>This Device</h3>
+        <p>Everything you save is stored in this browser, on this device. Opening the app on another phone or PC gives you a separate, empty set of records — use the backup below to move data between them.</p>
+        <ul id="storageStats" class="stats-list"></ul>
+        <p class="field-note" id="storageQuota"></p>
+        <p class="field-note" id="offlineStatus"></p>
+        <button type="button" id="installAppBtn" hidden>Install app on this device</button>
       </section>
 
       <section class="card">
         <h3>Backup / Restore</h3>
-        <p>Export a full backup of all invoices, documents and patients to the backup folder above, or import a previously exported backup file (e.g. after moving to a new machine).</p>
-        <button type="button" id="exportBackupBtn">Export Backup</button>
-        <button type="button" id="importBackupBtn">Import Backup</button>
-        <p id="backupStatus"></p>
+        <p>Export downloads a single file holding every invoice, document and patient. Import replaces the data on this device with the contents of such a file — it asks for confirmation first.</p>
+        <div class="preview-actions">
+          <button type="button" id="exportBackupBtn">Export Backup</button>
+          <button type="button" id="importBackupBtn" class="secondary">Import Backup</button>
+        </div>
+        <p id="backupStatus" class="field-note"></p>
+      </section>
+
+      <section class="card">
+        <h3>PDFs</h3>
+        <p>Generated PDFs are saved by the browser to its usual downloads folder. On a phone, use the share sheet from the download notification to send one to WhatsApp or e-mail.</p>
       </section>
     </section>
 
@@ -612,14 +660,32 @@
 
   <!-- FOOTER -->
   <footer class="app-footer">
-    <p>© Easy Walk Physical Therapy Rehabilitation</p>
+    <p>© EasyWalk Physiotherapy &amp; Rehabilitation Centre</p>
   </footer>
+
+  <!-- Printing moves the document being printed in here, and every other direct
+       child of <body> is taken out of layout. That is what stops the old
+       trailing blank pages. -->
+  <div id="print-root"></div>
 
   <!-- JS FILES -->
   <script src="js/html2pdf.bundle.min.js"></script>
+
+  <script src="js/config/clinic.js"></script>
+  <script src="js/core/util.js"></script>
+
+  <script src="js/platform/store.idb.js"></script>
+  <script src="js/platform/download.js"></script>
+  <script src="js/platform/api.web.js"></script>
+
   <script src="js/db.js"></script>
+  <script src="js/pdfOptions.js"></script>
+
   <script src="js/templates/docHeader.js"></script>
+  <script src="js/templates/invoiceChrome.js"></script>
   <script src="js/pagination.js"></script>
+  <script src="js/components/datePicker.js"></script>
+
   <script src="js/invoice.js"></script>
   <script src="js/pdf.js"></script>
   <script src="js/ui.js"></script>
@@ -628,7 +694,8 @@
   <script src="js/documents/certificate.js"></script>
   <script src="js/documents/additionalDocument.js"></script>
   <script src="js/settings.js"></script>
-  <script src="js/nav.js"></script> <!-- This should be last -->
+  <script src="js/nav.js"></script>
+  <script src="js/registerSw.js"></script>
 
 </body>
 </html>

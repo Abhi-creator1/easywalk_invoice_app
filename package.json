@@ -1,31 +1,15 @@
 {
-  "name": "easywalk-docs",
-  "version": "1.0.0",
-  "description": "EasyWalk Physiotherapy documentation app (invoices, treatment protocols, certificates)",
-  "main": "electron/main.js",
-  "scripts": {
-    "start": "electron .",
-    "dist": "electron-builder"
-  },
+  "name": "easywalk-docs-web",
+  "version": "2.0.0",
+  "private": true,
+  "description": "EasyWalk Physiotherapy documentation web app (invoices, treatment protocols, certificates, IPD patients). Runs in any browser and installs to a phone home screen; all data stays on the device.",
   "author": "EasyWalk Physiotherapy and Rehabilitation Centre",
   "license": "UNLICENSED",
-  "devDependencies": {
-    "electron": "^32.0.0",
-    "electron-builder": "^25.0.0"
+  "scripts": {
+    "start": "node tools/serve.js",
+    "test": "node tools/run-tests.js"
   },
-  "build": {
-    "appId": "com.easywalk.docs",
-    "productName": "EasyWalk Documentation",
-    "files": [
-      "electron/**/*",
-      "index.html",
-      "css/**/*",
-      "js/**/*",
-      "assets/**/*"
-    ],
-    "win": {
-      "target": "portable",
-      "icon": "assets/logo.png"
-    }
+  "devDependencies": {
+    "electron": "^32.0.0"
   }
 }

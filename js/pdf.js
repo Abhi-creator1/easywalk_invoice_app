@@ -1,18 +1,18 @@
-document.getElementById("printDocBtn").addEventListener("click", () => {
-  const preview = document.getElementById("invoice-preview");
-  const invoiceNo = document.getElementById("invoiceNumber").value || "Invoice";
+// Print buttons. The actual isolation + restore logic lives in
+// js/pdfOptions.js (printElement), which is what fixes the trailing blank page.
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("printDocBtn").addEventListener("click", () => {
+    const preview = document.getElementById("invoice-preview");
+    const items = document.getElementById("p-items");
 
-  preview.style.display = "flex";
-  preview.classList.add("print-target");
+    if (!items || items.children.length === 0) {
+      toast("Save or open an invoice first, then print it.", "error");
+      return;
+    }
 
-  const originalTitle = document.title;
-  document.title = invoiceNo;
-
-  setTimeout(() => {
-    window.print();
-    preview.classList.remove("print-target");
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 500);
-  }, 100);
+    preview.style.display = "flex";
+    printElement(preview, {
+      title: document.getElementById("invoiceNumber").value || "Invoice"
+    });
+  });
 });

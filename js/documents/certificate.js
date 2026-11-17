@@ -1,108 +1,199 @@
 // =======================
 // CERTIFICATE
 // =======================
+const certificateForm = document.getElementById("certificate-form");
+
+let renderedCertificate = null;
+
 function buildCertificateIntro(cert) {
   return `
-    <h3 class="doc-title">${cert.certType.toUpperCase()} CERTIFICATE</h3>
+    <h3 class="doc-title">${escapeHtml(String(cert.certType || "").toUpperCase())} CERTIFICATE</h3>
     <p><strong>Patient Name:</strong> ${escapeHtml(cert.patientName)}</p>
     <p><strong>Age / Gender:</strong> ${escapeHtml(cert.age) || "-"} / ${escapeHtml(cert.gender) || "-"}</p>
-    <p><strong>Diagnosis:</strong> ${escapeHtml(cert.diagnosis) || "-"}</p>
-    <p><strong>Date:</strong> ${escapeHtml(cert.date) || "-"}</p>
+    <p><strong>Diagnosis:</strong> ${escapeMultiline(cert.diagnosis) || "-"}</p>
+    <p><strong>Date:</strong> ${escapeHtml(formatDMY(cert.date))}</p>
   `;
 }
 
 function renderCertificatePreview(cert) {
-  const html = buildPaginatedDocument({
+  renderedCertificate = cert;
+
+  // The body is split into paragraphs so the paginator can flow it across
+  // sheets. It used to be handed over as one indivisible block, which meant
+  // anything past the first page was silently dropped.
+  document.getElementById("certificate-preview").innerHTML = buildPaginatedDocument({
     introHtml: buildCertificateIntro(cert),
     outroHtml: renderSignStampBlock({ signBy: cert.signBy, designation: cert.designation }),
-    items: [cert.body],
-    renderItem: text => `<p class="cert-body">${escapeHtml(text).replace(/\n/g, "<br/>")}</p>`,
-    itemsFirstPage: 1,
-    itemsPerPage: 1
+    items: splitTextIntoBlocks(cert.body),
+    renderItem: text => '<p class="cert-body">' + escapeMultiline(text) + "</p>"
   });
 
-  document.getElementById("certificate-preview").innerHTML = html;
-  document.getElementById("certificate-preview").dataset.docNumber = cert.docNumber;
-  document.getElementById("certificate-preview").dataset.patientName = cert.patientName;
   document.getElementById("certDownloadBtn").style.display = "inline-block";
+  document.getElementById("certPrintBtn").style.display = "inline-block";
+}
+
+function certificateFilename(cert) {
+  const monthYY = String(cert.docNumber || "").split("_")[1] || "";
+  return sanitizeFilenamePart(cert.patientName) + "_Certificate_" + monthYY;
 }
 
 async function generateCertificatePdf(cert) {
-  const el = document.getElementById("certificate-preview");
-  const monthYY = cert.docNumber.split("_")[1];
-  const filename = `${sanitizeFilenamePart(cert.patientName)}_Certificate_${monthYY}`;
-
-  const opt = {
-    margin: 0,
-    filename: `${filename}.pdf`,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 3 },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    pagebreak: { mode: "css" }
-  };
-
-  const pdf = await html2pdf().set(opt).from(el).toPdf().get("pdf");
-  const arrayBuffer = pdf.output("arraybuffer");
-  await window.api.savePdf(new Uint8Array(arrayBuffer), "certificate", filename);
-}
-
-async function loadCertificateHistory() {
-  const docs = await db.documents.toArray("certificate");
-  const tbody = document.querySelector("#certificateHistoryTable tbody");
-  tbody.innerHTML = "";
-
-  docs.forEach(doc => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${doc.docNumber}</td>
-      <td>${doc.date || "-"}</td>
-      <td>${doc.patientName}</td>
-      <td>${doc.certType}</td>
-      <td><button type="button" data-id="${doc.docNumber}">View</button></td>
-    `;
-    row.querySelector("button").addEventListener("click", () => {
-      renderCertificatePreview(doc);
-      document.getElementById("certificate-preview").scrollIntoView({ behavior: "smooth" });
-    });
-    tbody.appendChild(row);
+  return exportElementToPdf(document.getElementById("certificate-preview"), {
+    filename: certificateFilename(cert),
+    docType: "certificate"
   });
 }
 
+async function loadCertificateHistory() {
+  const result = await run(() => db.documents.toArray("certificate"), {
+    failure: "Could not load the certificate history."
+  });
+  if (!result.ok) return;
+
+  const docs = result.value.slice().sort((a, b) =>
+    String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+
+  const tbody = document.querySelector("#certificateHistoryTable tbody");
+
+  if (docs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-row">No certificates saved yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = docs.map(doc =>
+    "<tr>" +
+      "<td>" + escapeHtml(doc.docNumber) + "</td>" +
+      "<td>" + escapeHtml(formatDMY(doc.date)) + "</td>" +
+      "<td>" + escapeHtml(doc.patientName || "-") + "</td>" +
+      "<td>" + escapeHtml(doc.certType || "-") + "</td>" +
+      '<td class="row-actions">' +
+        '<button type="button" data-act="view" data-id="' + escapeHtml(doc.docNumber) + '">View</button>' +
+        '<button type="button" data-act="edit" data-id="' + escapeHtml(doc.docNumber) + '">Edit</button>' +
+        '<button type="button" class="danger" data-act="delete" data-id="' + escapeHtml(doc.docNumber) + '">Delete</button>' +
+      "</td>" +
+    "</tr>").join("");
+
+  tbody.onclick = async event => {
+    const button = event.target.closest("button[data-act]");
+    if (!button) return;
+
+    const doc = docs.find(item => item.docNumber === button.dataset.id);
+    if (!doc) return;
+
+    if (button.dataset.act === "view") {
+      renderCertificatePreview(doc);
+      document.getElementById("certificate-preview").scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    if (button.dataset.act === "edit") {
+      loadCertificateIntoForm(doc);
+      return;
+    }
+
+    if (button.dataset.act === "delete") {
+      if (!window.confirm("Delete certificate " + doc.docNumber + "?\n\nThis cannot be undone.")) return;
+      const outcome = await run(() => db.documents.remove(doc.docNumber), {
+        failure: "Could not delete that certificate."
+      });
+      if (!outcome.ok) return;
+      toast("Certificate " + doc.docNumber + " deleted.", "success");
+      await loadCertificateHistory();
+      if (typeof loadPatients === "function") await loadPatients();
+    }
+  };
+}
+
+function loadCertificateIntoForm(cert) {
+  certificateForm.dataset.editing = cert.docNumber;
+
+  document.getElementById("certPatientType").value = cert.patientType || "OPD";
+  document.getElementById("certPatientType").dispatchEvent(new Event("change"));
+  if (cert.patientId) document.getElementById("certPatientSelect").value = cert.patientId;
+
+  document.getElementById("certPatientName").value = cert.patientName || "";
+  document.getElementById("certAge").value = cert.age || "";
+  document.getElementById("certGender").value = cert.gender || "";
+  document.getElementById("certDiagnosis").value = cert.diagnosis || "";
+  document.getElementById("certType").value = cert.certType || "Fitness";
+  document.getElementById("certBody").value = cert.body || "";
+  document.getElementById("certDate").value = cert.date || "";
+  document.getElementById("certSignBy").value = cert.signBy || "";
+  document.getElementById("certDesignation").value = cert.designation || "";
+
+  updateCertEditingBanner();
+  certificateForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function clearCertificateForm() {
+  delete certificateForm.dataset.editing;
+  certificateForm.reset();
+  document.getElementById("certPatientType").dispatchEvent(new Event("change"));
+  updateCertEditingBanner();
+}
+
+function updateCertEditingBanner() {
+  const banner = document.getElementById("certEditingBanner");
+  if (!banner) return;
+  const editing = certificateForm.dataset.editing;
+  banner.hidden = !editing;
+  if (editing) banner.querySelector("span").textContent = "Editing certificate " + editing;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("certPatientType").addEventListener("change", e => {
-    const isIpd = e.target.value === "IPD";
+  document.getElementById("certClearBtn").addEventListener("click", clearCertificateForm);
+
+  document.getElementById("certPatientType").addEventListener("change", event => {
+    const isIpd = event.target.value === "IPD";
     document.getElementById("certPatientPicker").style.display = isIpd ? "block" : "none";
     document.getElementById("certOpdNote").style.display = isIpd ? "none" : "block";
   });
 
-  document.getElementById("certPatientSelect").addEventListener("change", async e => {
-    const patient = await db.patients.get(e.target.value);
+  document.getElementById("certPatientSelect").addEventListener("change", async event => {
+    if (!event.target.value) return;
+    const result = await run(() => db.patients.get(event.target.value), {
+      failure: "Could not load that patient."
+    });
+    const patient = result.value;
     if (!patient) return;
+
     document.getElementById("certPatientName").value = patient.name || "";
     document.getElementById("certAge").value = patient.age || "";
     document.getElementById("certGender").value = patient.gender || "";
     document.getElementById("certDiagnosis").value = patient.diagnosis || "";
     document.getElementById("certSignBy").value = patient.physio || "";
-    e.target.blur();
+    event.target.blur();
   });
 
-  document.getElementById("certificate-form").addEventListener("submit", async e => {
-    e.preventDefault();
+  certificateForm.addEventListener("submit", async event => {
+    event.preventDefault();
 
     const patientType = document.getElementById("certPatientType").value;
-    const patientId = patientType === "IPD" ? document.getElementById("certPatientSelect").value : null;
+    const patientId = patientType === "IPD"
+      ? document.getElementById("certPatientSelect").value
+      : null;
 
     if (patientType === "IPD" && !patientId) {
-      alert("Please select an IPD patient, or add one under Patients (IPD).");
+      toast("Select an IPD patient, or add one under Patients (IPD).", "error");
       return;
     }
 
-    const docNumber = await window.api.nextDocNumber("CERT");
+    if (!document.getElementById("certBody").value.trim()) {
+      toast("Enter the certificate wording.", "error");
+      return;
+    }
+
+    const editing = certificateForm.dataset.editing;
+    const numbered = await run(
+      () => (editing ? Promise.resolve(editing) : window.api.nextDocNumber("CERT")),
+      { failure: "Could not assign a document number." });
+    if (!numbered.ok) return;
+
     const date = document.getElementById("certDate").value;
 
     const cert = {
       docType: "certificate",
-      docNumber,
+      docNumber: numbered.value,
       patientType,
       patientId,
       patientName: document.getElementById("certPatientName").value,
@@ -117,30 +208,48 @@ document.addEventListener("DOMContentLoaded", () => {
       createdAt: new Date().toISOString()
     };
 
-    await db.documents.put(cert);
+    const saved = await run(async () => {
+      await db.documents.put(cert);
+      if (patientType === "IPD" && patientId) {
+        await db.patients.linkDocument({
+          patientId,
+          docType: "certificate",
+          docNumber: cert.docNumber,
+          date: date || cert.createdAt.slice(0, 10)
+        });
+        if (typeof loadPatients === "function") await loadPatients();
+      }
+    }, { failure: "The certificate could not be saved." });
 
-    if (patientType === "IPD" && patientId) {
-      await db.patients.linkDocument({
-        patientId,
-        docType: "certificate",
-        docNumber,
-        date: date || cert.createdAt.slice(0, 10)
-      });
-      await loadPatients();
-    }
+    if (!saved.ok) return;
 
     renderCertificatePreview(cert);
-    await generateCertificatePdf(cert);
-    await loadCertificateHistory();
 
-    alert("Certificate saved and PDF exported ✅");
+    const pdf = await run(() => generateCertificatePdf(cert), {
+      failure: "The certificate was saved, but the PDF could not be created."
+    });
+
+    await loadCertificateHistory();
+    delete certificateForm.dataset.editing;
+    updateCertEditingBanner();
+
+    if (pdf.ok) {
+      toast("Certificate " + cert.docNumber + " saved. PDF downloaded: " + pdf.value, "success", 6000);
+    }
   });
 
   document.getElementById("certDownloadBtn").addEventListener("click", async () => {
-    const preview = document.getElementById("certificate-preview");
-    if (preview.dataset.docNumber) {
-      await generateCertificatePdf({ docNumber: preview.dataset.docNumber, patientName: preview.dataset.patientName });
-    }
+    if (!renderedCertificate) return;
+    await run(() => generateCertificatePdf(renderedCertificate), {
+      failure: "Could not create that PDF."
+    });
+  });
+
+  document.getElementById("certPrintBtn").addEventListener("click", () => {
+    if (!renderedCertificate) return;
+    printElement(document.getElementById("certificate-preview"), {
+      title: certificateFilename(renderedCertificate)
+    });
   });
 
   loadCertificateHistory();

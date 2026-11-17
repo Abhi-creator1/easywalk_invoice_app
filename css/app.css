@@ -7,10 +7,21 @@
   padding: 0;
 }
 
+:root {
+  --brand: #2457a7;
+  --brand-dark: #1c4483;
+  --accent: #f2c200;
+  --danger: #c0392b;
+  --ink: #222;
+  --muted: #666;
+  --line: #ddd;
+  --page: #f4f6f8;
+}
+
 body {
   font-family: Arial, Helvetica, sans-serif;
-  background-color: #f4f6f8;
-  color: #222;
+  background-color: var(--page);
+  color: var(--ink);
   line-height: 1.4;
 }
 
@@ -21,7 +32,7 @@ body {
   display: flex;
   align-items: center;
   padding: 16px;
-  background-color: #2457a7;
+  background-color: var(--brand);
   color: #ffffff;
 }
 
@@ -49,10 +60,16 @@ body {
 ========================= */
 .app-nav {
   display: flex;
-  flex-wrap: wrap;
   gap: 4px;
-  background: #1c4483;
+  background: var(--brand-dark);
   padding: 0 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.app-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-btn {
@@ -65,6 +82,8 @@ body {
   font-weight: bold;
   opacity: 0.75;
   cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .nav-btn:hover {
@@ -73,7 +92,7 @@ body {
 
 .nav-btn.active {
   opacity: 1;
-  border-bottom: 3px solid #f2c200;
+  border-bottom: 3px solid var(--accent);
 }
 
 /* =========================
@@ -99,19 +118,44 @@ body {
   margin-top: 8px;
   font-size: 13px;
   font-style: italic;
-  color: #666;
+  color: var(--muted);
+}
+
+.field-note {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .link-btn {
   background: transparent;
-  border: 1px solid #2457a7;
-  color: #2457a7;
+  border: 1px solid var(--brand);
+  color: var(--brand);
   padding: 6px 10px;
 }
 
 .app-container h2 {
   margin-bottom: 16px;
-  color: #2457a7;
+  color: var(--brand);
+}
+
+.editing-banner {
+  background: #fff6d6;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.stats-list {
+  list-style: none;
+  margin: 12px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 14px;
 }
 
 /* =========================
@@ -122,7 +166,7 @@ body {
   padding: 12px;
   font-size: 12px;
   background-color: #ffffff;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid var(--line);
 }
 
 /* =========================
@@ -133,12 +177,12 @@ body {
   padding: 16px;
   margin-bottom: 16px;
   border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .card h3 {
   margin-bottom: 12px;
-  color: #2457a7;
+  color: var(--brand);
 }
 
 label {
@@ -155,6 +199,8 @@ select {
   margin-top: 4px;
   border: 1px solid #ccc;
   border-radius: 3px;
+  font-size: 15px;
+  font-family: inherit;
 }
 
 textarea {
@@ -181,7 +227,7 @@ table {
 
 th,
 td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--line);
   padding: 8px;
   text-align: center;
 }
@@ -190,21 +236,63 @@ th {
   background: #f0f3f8;
 }
 
+.empty-row {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.row-actions {
+  white-space: nowrap;
+}
+
+.row-actions button {
+  margin: 2px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* =========================
    BUTTONS
 ========================= */
 button {
   margin-top: 12px;
-  padding: 8px 12px;
-  background-color: #f2c200;
+  padding: 10px 14px;
+  background-color: var(--accent);
   border: none;
+  border-radius: 3px;
   cursor: pointer;
   font-weight: bold;
+  font-size: 14px;
+  font-family: inherit;
+  min-height: 40px;
 }
 
 button:hover {
   opacity: 0.9;
 }
+
+button.secondary {
+  background: #e7ebf2;
+  color: #2a3345;
+}
+
+button.danger {
+  background: #fdecea;
+  color: var(--danger);
+}
+
+.preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* =========================
    TOTALS (FORM)
 ========================= */
@@ -216,20 +304,50 @@ button:hover {
 .totals-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   padding: 6px 0;
+}
+
+.totals-row input {
+  width: 120px;
 }
 
 .totals-row.total {
   font-size: 18px;
   font-weight: bold;
-  border-top: 2px solid #2457a7;
+  border-top: 2px solid var(--brand);
 }
 
 /* =========================
    ACTIONS
 ========================= */
 .actions {
-  text-align: right;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* =========================
+   PREVIEW WRAPPER
+========================= */
+/* The previews are a fixed 210mm wide. On a narrow screen the wrapper scrolls
+   sideways, and `fit` zooms the sheet down to the available width (the zoom
+   factor is set from JS; see syncPreviewFit in js/pdfOptions.js). `zoom` is
+   used rather than `transform` so the wrapper's height follows the sheet. */
+.preview-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.preview-scroll.fit {
+  overflow-x: hidden;
+}
+
+.preview-scroll.fit > * {
+  zoom: var(--preview-zoom, 1);
 }
 
 /* =========================
@@ -237,7 +355,11 @@ button:hover {
 ========================= */
 .invoice-preview {
   width: 210mm;
-  min-height: 290mm;   /* Slightly under A4 (297mm) so canvas/PDF rounding never spills a blank 2nd page */
+  /* Under A4's 297mm so rounding cannot spill a sliver onto a second sheet,
+     while still being tall enough to push the footer to the bottom. Content
+     longer than this grows the sheet and flows onto a second page rather than
+     being clipped. */
+  min-height: 290mm;
   padding: 15mm;
   box-sizing: border-box;
   background: #ffffff;
@@ -245,6 +367,7 @@ button:hover {
   display: none;
   flex-direction: column;
 }
+
 /* ---------- Header ---------- */
 .invoice-header {
   display: grid;
@@ -264,7 +387,7 @@ button:hover {
 }
 
 .invoice-header h2 {
-  color: #2457a7;
+  color: var(--brand);
   margin-bottom: 2px;
 }
 
@@ -284,11 +407,13 @@ button:hover {
 .invoice-meta {
   display: flex;
   justify-content: space-between;
+  gap: 20px;
   margin: 15px 0;
 }
 
 .meta-right {
   text-align: right;
+  white-space: nowrap;
 }
 
 /* ---------- Invoice Table ---------- */
@@ -300,12 +425,24 @@ button:hover {
 
 .invoice-table th,
 .invoice-table td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--line);
   padding: 8px;
 }
 
 .invoice-table th {
   background: #f0f3f8;
+}
+
+/* The dates column carries the most text, so give it the slack and keep the
+   money columns from wrapping "₹" onto its own line. */
+.invoice-table th:first-child,
+.invoice-table td:first-child {
+  width: 42%;
+}
+
+.invoice-table td:nth-child(n + 3),
+.invoice-table th:nth-child(n + 3) {
+  white-space: nowrap;
 }
 
 /* ---------- Totals (Preview) ---------- */
@@ -319,10 +456,15 @@ button:hover {
   margin: 4px 0;
 }
 
+.invoice-totals .gst-split {
+  margin-left: 20px;
+  color: var(--muted);
+}
+
 .invoice-totals .grand-total {
   font-size: 16px;
   font-weight: bold;
-  color: #2457a7;
+  color: var(--brand);
   margin-top: 8px;
 }
 
@@ -336,7 +478,7 @@ button:hover {
 .invoice-footer {
   margin: 20px -15mm -15mm -15mm;
   margin-top: auto;   /* Pushes footer to the bottom of the page regardless of content length */
-  background-color: #2457a7;
+  background-color: var(--brand);
   color: #ffffff;
   font-size: 12px;
   padding: 6mm 15mm;
@@ -345,86 +487,11 @@ button:hover {
 }
 
 /* =========================
-   INVOICE HISTORY
-========================= */
-#historyTable {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 12px;
-}
-
-#historyTable th,
-#historyTable td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: center;
-}
-
-#historyTable th {
-  background: #f0f3f8;
-}
-
-/* =========================
-   PRINT (PDF via Browser)
-========================= */
-@media print {
-  html, body {
-    margin:0%;
-    padding:0%;
-    height: 99%;
-  }
-  body * {
-    visibility: hidden !important;
-  }
-
-  .print-target,
-  .print-target * {
-    visibility: visible !important;
-  }
-
-  /* Print-specific styling */
-  .print-target {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 210mm;
-    box-sizing: border-box;
-    background: white;
-  }
-
-  button,
-  .actions,
-  .app-header,
-  .app-nav,
-  .app-footer,
-  #historyTable {
-    display: none !important;
-  }
-}
-/* Disable page margins */
-@page {
-  size: A4;
-  margin: 0;
-}
-
-/* Ensure background color printing */
-@media print {
-  * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-}
-
-.table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-}
-
-/* =========================
    TREATMENT DATE CHIPS
 ========================= */
 .dates-cell {
-  min-width: 180px;
+  min-width: 230px;
+  text-align: left;
 }
 
 .date-chips {
@@ -432,6 +499,12 @@ button:hover {
   flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 6px;
+}
+
+.date-empty {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
 }
 
 .date-chip {
@@ -448,53 +521,238 @@ button:hover {
 
 .date-chip .remove-chip {
   margin: 0;
-  padding: 0;
+  padding: 0 2px;
+  min-height: 0;
   background: transparent;
   border: none;
   font-size: 11px;
   font-weight: normal;
   cursor: pointer;
+  color: var(--muted);
 }
 
-.date-add-row {
+.date-controls {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.date-add-row .date-input,
-.date-add-row .range-from-input,
-.date-add-row .range-to-input {
-  width: auto;
+.pick-dates-btn {
   margin-top: 0;
-  padding: 4px;
-}
-
-.date-add-row .add-date-btn,
-.date-add-row .add-range-btn {
-  margin-top: 0;
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
-.date-add-row span {
+.date-manual {
+  margin-top: 6px;
   font-size: 12px;
-  color: #666;
+  padding: 6px;
+}
+
+.date-manual-error {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--danger);
 }
 
 /* =========================
-   GENERAL DOCUMENTS (Treatment Protocol, Certificate)
+   DATE PICKER
+========================= */
+.dp-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 40;
+}
+
+.dp-backdrop.visible {
+  display: block;
+}
+
+.dp-pop {
+  display: none;
+  position: fixed;
+  z-index: 50;
+  width: 320px;
+  background: #ffffff;
+  border: 1px solid #c8d2e4;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  padding: 10px;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Never taller than the window, so the whole calendar stays reachable. */
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+}
+
+.dp-pop.visible {
+  display: block;
+}
+
+.dp-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dp-head .dp-month {
+  flex: 1 1 auto;
+  margin-top: 0;
+  padding: 6px;
+}
+
+.dp-head .dp-year {
+  width: 74px;
+  margin-top: 0;
+  padding: 6px;
+}
+
+.dp-nav {
+  margin-top: 0;
+  min-height: 34px;
+  padding: 4px 10px;
+  background: #eef2f9;
+  color: var(--brand);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.dp-weekdays,
+.dp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.dp-weekdays {
+  margin-top: 10px;
+}
+
+.dp-weekdays span {
+  text-align: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--muted);
+  padding-bottom: 4px;
+}
+
+/* Dragging must select dates, not scroll the sheet. */
+.dp-grid {
+  touch-action: none;
+}
+
+.dp-day {
+  margin-top: 0;
+  min-height: 40px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: #f6f8fc;
+  color: var(--ink);
+  font-weight: normal;
+  font-size: 14px;
+}
+
+.dp-day.dp-other {
+  color: #b4bcca;
+}
+
+.dp-day.dp-today {
+  border-color: var(--accent);
+  font-weight: bold;
+}
+
+.dp-day.dp-sel {
+  background: var(--brand);
+  color: #ffffff;
+  font-weight: bold;
+}
+
+/* Consecutive selected days join up into one band. */
+.dp-day.dp-start {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.dp-day.dp-end {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.dp-day.dp-mid {
+  border-radius: 0;
+}
+
+.dp-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.dp-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dp-action {
+  flex: 1 1 auto;
+  margin-top: 0;
+  min-height: 36px;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: #eef2f9;
+  color: var(--brand);
+}
+
+.dp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.dp-count {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.dp-done {
+  margin-top: 0;
+}
+
+/* On a phone the calendar becomes a bottom sheet. */
+.dp-pop.dp-sheet {
+  width: auto;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  border-radius: 12px 12px 0 0;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+.dp-pop.dp-sheet .dp-day {
+  min-height: 44px;
+}
+
+/* =========================
+   GENERAL DOCUMENTS (Treatment Protocol, Certificate, ...)
 ========================= */
 .doc-preview {
   display: none;
   width: 210mm;
   background: #ffffff;
-}
-
-.doc-preview:empty {
-  display: none;
 }
 
 .doc-preview:not(:empty) {
@@ -503,15 +761,18 @@ button:hover {
 
 .doc-page {
   width: 210mm;
+  min-height: 296mm;
   padding: 0 15mm 15mm 15mm;
   box-sizing: border-box;
   position: relative;
   background: #ffffff;
   page-break-after: always;
+  break-after: page;
 }
 
 .doc-page:last-child {
   page-break-after: auto;
+  break-after: auto;
 }
 
 .doc-header {
@@ -520,7 +781,7 @@ button:hover {
 }
 
 .doc-header-first {
-  background-color: #2457a7;
+  background-color: var(--brand);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -546,7 +807,7 @@ button:hover {
   text-align: center;
   color: #333;
   font-size: 12px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--line);
   padding-bottom: 8px;
 }
 
@@ -555,7 +816,7 @@ button:hover {
 }
 
 .doc-title {
-  color: #2457a7;
+  color: var(--brand);
   margin: 10px 0;
   letter-spacing: 1px;
 }
@@ -607,7 +868,194 @@ button:hover {
   margin-top: 12px;
   font-size: 11px;
   font-style: italic;
-  color: #c0392b;
+  color: var(--danger);
   text-align: center;
 }
 
+/* =========================
+   PAGINATION MEASURING HOST
+========================= */
+/* Off-screen but laid out, so heights can be measured. visibility (not
+   display) because a display:none element has no measurable height. */
+#pagination-measure {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 210mm;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+#pagination-measure .doc-page {
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+/* =========================
+   TOASTS
+========================= */
+#toast-host {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(520px, calc(100vw - 24px));
+}
+
+.toast {
+  padding: 12px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #ffffff;
+  background: #333c4d;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+.toast-success {
+  background: #1e7b45;
+}
+
+.toast-error {
+  background: var(--danger);
+}
+
+.toast-out {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+/* =========================
+   PRINTING
+========================= */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+/* Never takes up space on screen. */
+#print-root {
+  display: none;
+}
+
+@media print {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+
+  /* The document being printed is moved into #print-root, and every other
+     direct child of <body> is taken OUT OF LAYOUT. The old stylesheet used
+     `visibility: hidden` here, which leaves elements occupying their full
+     height -- the invoice form alone then generated one or two extra sheets
+     that printed blank. */
+  body.printing > *:not(#print-root) {
+    display: none !important;
+  }
+
+  body.printing #print-root {
+    display: block;
+  }
+
+  .print-target {
+    width: 210mm;
+    margin: 0;
+    box-shadow: none;
+  }
+
+  .invoice-preview.print-target {
+    display: flex !important;
+  }
+
+  /* Each generated page is exactly one sheet; the paginator has already made
+     sure the content fits, so clipping here is a guard, not a behaviour. */
+  .doc-page {
+    height: 296mm;
+    min-height: 296mm;
+    overflow: hidden;
+  }
+
+  /* Keep rows and the signature block from being split across sheets. */
+  .invoice-table tr,
+  .sign-stamp-block,
+  .invoice-footer,
+  .protocol-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* =========================
+   RESPONSIVE (PHONE / TABLET)
+========================= */
+@media (max-width: 820px) {
+  .app-header {
+    padding: 12px;
+  }
+
+  .logo {
+    height: 44px;
+  }
+
+  .header-right h1 {
+    font-size: 19px;
+  }
+
+  .header-right p {
+    font-size: 12px;
+  }
+
+  .app-container {
+    padding: 12px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  /* Side-by-side field pairs stack rather than squeezing. */
+  .row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .totals {
+    max-width: none;
+  }
+
+  .totals-row input {
+    width: 110px;
+  }
+
+  .actions {
+    justify-content: stretch;
+  }
+
+  .actions button,
+  .preview-actions button {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+
+  .dates-cell {
+    min-width: 200px;
+  }
+
+  th,
+  td {
+    padding: 6px;
+    font-size: 13px;
+  }
+}
