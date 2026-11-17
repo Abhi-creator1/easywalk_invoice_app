@@ -633,16 +633,33 @@
 
       <section class="card">
         <h3>This Device</h3>
-        <p>Everything you save is stored in this browser, on this device. Opening the app on another phone or PC gives you a separate, empty set of records — use the backup below to move data between them.</p>
+        <p id="storageWhere"></p>
         <ul id="storageStats" class="stats-list"></ul>
         <p class="field-note" id="storageQuota"></p>
         <p class="field-note" id="offlineStatus"></p>
         <button type="button" id="installAppBtn" hidden>Install app on this device</button>
       </section>
 
+      <!-- Desktop build only; js/settings.js reveals this when window.api
+           reports the Electron platform. -->
+      <section class="card" id="desktopFoldersCard" hidden>
+        <h3>Storage Folders</h3>
+        <label for="pdfFolderPath">PDF Output Folder</label>
+        <div class="row">
+          <input type="text" id="pdfFolderPath" readonly />
+          <button type="button" id="pickPdfFolderBtn">Choose Folder</button>
+        </div>
+
+        <label for="backupFolderPath">Backup Folder</label>
+        <div class="row">
+          <input type="text" id="backupFolderPath" readonly />
+          <button type="button" id="pickBackupFolderBtn">Choose Folder</button>
+        </div>
+      </section>
+
       <section class="card">
         <h3>Backup / Restore</h3>
-        <p>Export downloads a single file holding every invoice, document and patient. Import replaces the data on this device with the contents of such a file — it asks for confirmation first.</p>
+        <p>Export writes a single file holding every invoice, document and patient. Import replaces the data on this device with the contents of such a file — it asks for confirmation first.</p>
         <div class="preview-actions">
           <button type="button" id="exportBackupBtn">Export Backup</button>
           <button type="button" id="importBackupBtn" class="secondary">Import Backup</button>
@@ -652,7 +669,7 @@
 
       <section class="card">
         <h3>PDFs</h3>
-        <p>Generated PDFs are saved by the browser to its usual downloads folder. On a phone, use the share sheet from the download notification to send one to WhatsApp or e-mail.</p>
+        <p id="pdfLocationNote"></p>
       </section>
     </section>
 

@@ -286,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateProtocolEditingBanner();
 
     if (pdf.ok) {
-      toast("Protocol " + protocol.docNumber + " saved. PDF downloaded: " + pdf.value, "success", 6000);
+      toast("Protocol " + protocol.docNumber + " saved. PDF: " + pdf.value, "success", 6000);
     }
   });
 

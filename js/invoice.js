@@ -423,7 +423,7 @@ invoiceForm.addEventListener("submit", async event => {
   updateEditingBanner();
 
   if (pdf.ok) {
-    toast("Invoice " + invoice.invoiceNumber + " saved. PDF downloaded: " + pdf.value, "success", 6000);
+    toast("Invoice " + invoice.invoiceNumber + " saved. PDF: " + pdf.value, "success", 6000);
   }
 
   // The field now shows what the *next* invoice will be numbered.

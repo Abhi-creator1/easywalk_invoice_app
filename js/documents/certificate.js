@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateCertEditingBanner();
 
     if (pdf.ok) {
-      toast("Certificate " + cert.docNumber + " saved. PDF downloaded: " + pdf.value, "success", 6000);
+      toast("Certificate " + cert.docNumber + " saved. PDF: " + pdf.value, "success", 6000);
     }
   });
 
