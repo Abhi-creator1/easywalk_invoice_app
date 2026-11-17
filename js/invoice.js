@@ -16,15 +16,31 @@ function setText(id, value) {
   if (el) el.innerText = value;
 }
 
+function sanitizeFilenamePart(str) {
+  return (str || "").trim().replace(/[\\/:*?"<>|]+/g, "_").replace(/\s+/g, "_") || "Invoice";
+}
+
 // =======================
-// LINE ITEMS
+// LINE ITEMS (Treatment Dates)
 // =======================
 function addItemRow() {
   const row = document.createElement("tr");
 
   row.innerHTML = `
-    <td><input type="text" class="desc" /></td>
-    <td><input type="text" class="duration" placeholder="1hr" /></td> <!-- Added Duration Input -->
+    <td class="dates-cell">
+      <div class="date-chips"></div>
+      <div class="date-add-row">
+        <input type="date" class="date-input" />
+        <button type="button" class="add-date-btn">+ Add Date</button>
+      </div>
+      <div class="date-add-row">
+        <input type="date" class="range-from-input" />
+        <span>to</span>
+        <input type="date" class="range-to-input" />
+        <button type="button" class="add-range-btn">+ Add Range</button>
+      </div>
+    </td>
+    <td><input type="text" class="duration" placeholder="1hr" /></td>
     <td><input type="number" class="qty" value="1" min="1" /></td>
     <td><input type="number" class="rate" value="0" min="0" /></td>
     <td class="amount">₹ 0.00</td>
@@ -35,12 +51,100 @@ function addItemRow() {
     input.addEventListener("input", calculateTotals);
   });
 
+  row.querySelector(".add-date-btn").addEventListener("click", () => {
+    const dateInput = row.querySelector(".date-input");
+    if (!dateInput.value) return;
+    addDateChip(row, dateInput.value);
+    dateInput.value = "";
+  });
+
+  row.querySelector(".add-range-btn").addEventListener("click", () => {
+    const fromInput = row.querySelector(".range-from-input");
+    const toInput = row.querySelector(".range-to-input");
+    if (!fromInput.value || !toInput.value) return;
+    if (toInput.value < fromInput.value) {
+      alert("Range end date must be on or after the start date.");
+      return;
+    }
+    addRangeChip(row, fromInput.value, toInput.value);
+    fromInput.value = "";
+    toInput.value = "";
+  });
+
   row.querySelector(".remove").addEventListener("click", () => {
     row.remove();
     calculateTotals();
   });
 
   itemsTableBody.appendChild(row);
+}
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"];
+
+function formatChipDate(isoDate) {
+  const [y, m, d] = isoDate.split("-");
+  return `${d}/${m}/${y.slice(2)}`;
+}
+
+function isFirstDayOfMonth(isoDate) {
+  return Number(isoDate.split("-")[2]) === 1;
+}
+
+function isLastDayOfMonth(isoDate) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(y, m, 0).getDate() === d;
+}
+
+function formatMonthYear(isoDate) {
+  const [y, m] = isoDate.split("-").map(Number);
+  return `${MONTH_NAMES[m - 1]} ${y}`;
+}
+
+function formatRangeLabel(fromIso, toIso) {
+  if (isFirstDayOfMonth(fromIso) && isLastDayOfMonth(toIso)) {
+    const fromLabel = formatMonthYear(fromIso);
+    const toLabel = formatMonthYear(toIso);
+    return fromLabel === toLabel ? fromLabel : `${fromLabel} - ${toLabel}`;
+  }
+  return `${formatChipDate(fromIso)} - ${formatChipDate(toIso)}`;
+}
+
+function addDateChip(row, isoDate) {
+  const chip = document.createElement("span");
+  chip.className = "date-chip";
+  chip.dataset.type = "single";
+  chip.dataset.date = isoDate;
+  chip.innerHTML = `${formatChipDate(isoDate)} <button type="button" class="remove-chip">✕</button>`;
+
+  chip.querySelector(".remove-chip").addEventListener("click", () => chip.remove());
+
+  row.querySelector(".date-chips").appendChild(chip);
+}
+
+function addRangeChip(row, fromIso, toIso) {
+  const chip = document.createElement("span");
+  chip.className = "date-chip";
+  chip.dataset.type = "range";
+  chip.dataset.from = fromIso;
+  chip.dataset.to = toIso;
+  chip.innerHTML = `${formatRangeLabel(fromIso, toIso)} <button type="button" class="remove-chip">✕</button>`;
+
+  chip.querySelector(".remove-chip").addEventListener("click", () => chip.remove());
+
+  row.querySelector(".date-chips").appendChild(chip);
+}
+
+function getRowDates(row) {
+  return [...row.querySelectorAll(".date-chip")].map(chip =>
+    chip.dataset.type === "range"
+      ? { type: "range", from: chip.dataset.from, to: chip.dataset.to }
+      : { type: "single", date: chip.dataset.date }
+  );
+}
+
+function formatDateEntry(entry) {
+  return entry.type === "range" ? formatRangeLabel(entry.from, entry.to) : formatChipDate(entry.date);
 }
 
 // =======================
@@ -85,6 +189,27 @@ calculateTotals();
 addItemBtn.addEventListener("click", addItemRow);
 
 // =======================
+// IPD / OPD PATIENT LINKING
+// =======================
+document.getElementById("invoicePatientType").addEventListener("change", e => {
+  const isIpd = e.target.value === "IPD";
+  document.getElementById("invoicePatientPicker").style.display = isIpd ? "block" : "none";
+  document.getElementById("invoiceOpdNote").style.display = isIpd ? "none" : "block";
+});
+
+document.getElementById("invoicePatientSelect").addEventListener("change", async e => {
+  const patient = await db.patients.get(e.target.value);
+  if (!patient) return;
+  document.getElementById("customerName").value = patient.name || "";
+  document.getElementById("customerAge").value = patient.age || "";
+  document.getElementById("customerGender").value = patient.gender || "";
+  document.getElementById("customerPhone").value = patient.phone || "";
+  document.getElementById("customerAddress").value = patient.address || "";
+  document.getElementById("treatment").value = patient.diagnosis || "";
+  e.target.blur();
+});
+
+// =======================
 // PREVIEW
 // =======================
 function populatePreview(invoice) {
@@ -112,8 +237,8 @@ function populatePreview(invoice) {
   invoice.items.forEach(item => {
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${item.description}</td>
-      <td>${item.duration}</td> <!-- Added Duration to Preview -->
+      <td>${(item.dates || []).map(formatDateEntry).join(", ") || "-"}</td>
+      <td>${item.duration}</td>
       <td>${item.quantity}</td>
       <td>${formatINR(item.rate)}</td>
       <td>${formatINR(item.amount)}</td>
@@ -121,7 +246,26 @@ function populatePreview(invoice) {
     itemsBody.appendChild(row);
   });
 
-  document.getElementById("invoice-preview").style.display = "block";
+  document.getElementById("invoice-preview").style.display = "flex";
+}
+
+async function generateInvoicePdf(invoice) {
+  const preview = document.getElementById("invoice-preview");
+  preview.style.display = "flex";
+
+  const opt = {
+    margin: 0,
+    filename: `${invoice.invoiceNumber}.pdf`,
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 3 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+  };
+
+  const pdf = await html2pdf().set(opt).from(preview).toPdf().get("pdf");
+  const arrayBuffer = pdf.output("arraybuffer");
+
+  const filename = `${sanitizeFilenamePart(invoice.customer.name)}_${sanitizeFilenamePart(invoice.invoiceNumber)}`;
+  return window.api.savePdf(new Uint8Array(arrayBuffer), "invoice", filename);
 }
 
 // =======================
@@ -137,11 +281,12 @@ document.getElementById("invoice-form").addEventListener("submit", async (e) => 
     const qty = Number(row.querySelector(".qty").value) || 0;
     const rate = Number(row.querySelector(".rate").value) || 0;
     const amount = qty * rate;
-    const duration = row.querySelector(".duration").value || "1hr";  // Added Duration
+    const duration = row.querySelector(".duration").value || "1hr";
+    const dates = getRowDates(row);
 
     items.push({
-      description: row.querySelector(".desc").value,
-      duration: duration,  // Storing Duration
+      dates,
+      duration,
       quantity: qty,
       rate: rate,
       amount: amount
@@ -157,9 +302,19 @@ document.getElementById("invoice-form").addEventListener("submit", async (e) => 
   const paid = Number(document.getElementById("paidAmount").value) || 0;
   const balance = total - paid;
 
+  const patientType = document.getElementById("invoicePatientType").value;
+  const patientId = patientType === "IPD" ? document.getElementById("invoicePatientSelect").value : null;
+
+  if (patientType === "IPD" && !patientId) {
+    alert("Please select an IPD patient, or add one under Patients (IPD).");
+    return;
+  }
+
   const invoice = {
     invoiceNumber: document.getElementById("invoiceNumber").value,
     invoiceDate: document.getElementById("invoiceDate").value,
+    patientType,
+    patientId,
 
     customer: {
       name: document.getElementById("customerName").value,
@@ -180,14 +335,25 @@ document.getElementById("invoice-form").addEventListener("submit", async (e) => 
     balance,
 
     currency: "INR",
-    syncStatus: "PENDING",
     createdAt: new Date().toISOString()
   };
 
   await db.invoices.put(invoice);
 
+  if (patientType === "IPD" && patientId) {
+    await db.patients.linkDocument({
+      patientId,
+      docType: "invoice",
+      docNumber: invoice.invoiceNumber,
+      date: invoice.invoiceDate || invoice.createdAt.slice(0, 10),
+      amount: total
+    });
+    if (typeof loadPatients === "function") await loadPatients();
+  }
+
   populatePreview(invoice);
+  const filePath = await generateInvoicePdf(invoice);
   loadInvoiceHistory();
 
-  alert("Invoice saved locally ✅");
+  alert(`Invoice saved and PDF exported to:\n${filePath}`);
 });

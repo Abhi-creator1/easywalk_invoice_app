@@ -1,19 +1,16 @@
-document.getElementById("downloadPdfBtn").addEventListener("click", () => {
+document.getElementById("printDocBtn").addEventListener("click", () => {
   const preview = document.getElementById("invoice-preview");
-  preview.style.display = "block";
-
   const invoiceNo = document.getElementById("invoiceNumber").value || "Invoice";
 
-  // Save original title
-  const originalTitle = document.title;
+  preview.style.display = "flex";
+  preview.classList.add("print-target");
 
-  // Set title to invoice number
+  const originalTitle = document.title;
   document.title = invoiceNo;
 
   setTimeout(() => {
     window.print();
-
-    // Restore original title after print
+    preview.classList.remove("print-target");
     setTimeout(() => {
       document.title = originalTitle;
     }, 500);

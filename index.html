@@ -3,14 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Easy Walk – Invoice App</title>
+  <title>EasyWalk – Documentation</title>
 
   <!-- Main CSS -->
   <link rel="stylesheet" href="css/app.css" />
-  <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2457a7" />
-  <script src="https://accounts.google.com/gsi/client"></script>
-
 </head>
 <body>
 
@@ -25,8 +22,23 @@
     </div>
   </header>
 
+  <!-- NAV -->
+  <nav class="app-nav">
+    <button class="nav-btn active" data-view="invoice">Invoice</button>
+    <button class="nav-btn" data-view="protocol">Treatment Protocol</button>
+    <button class="nav-btn" data-view="certificate">Certificate</button>
+    <button class="nav-btn" data-view="patients">Patients (IPD)</button>
+    <button class="nav-btn" data-view="additional">Additional Document</button>
+    <button class="nav-btn" data-view="settings">Settings</button>
+  </nav>
+
   <!-- MAIN CONTENT -->
   <main class="app-container">
+
+    <!-- =======================================================
+         INVOICE VIEW
+    ======================================================== -->
+    <section id="view-invoice" class="view active">
     <h2>Invoice</h2>
 
     <form id="invoice-form">
@@ -42,6 +54,25 @@
         <label>Invoice Date</label>
         <input type="date" id="invoiceDate" />
       </div>
+    </div>
+  </section>
+
+  <!-- PATIENT TYPE -->
+  <section class="card">
+    <label>Patient Type</label>
+    <select id="invoicePatientType">
+      <option value="OPD">OPD</option>
+      <option value="IPD">IPD</option>
+    </select>
+
+    <p id="invoiceOpdNote" class="patient-type-note">OPD — no profile needed, fill details below.</p>
+
+    <div id="invoicePatientPicker" class="patient-picker" style="display:none;">
+      <label>Select IPD Patient</label>
+      <select id="invoicePatientSelect">
+        <option value="">-- Select Patient --</option>
+      </select>
+      <button type="button" class="link-btn" data-goto="patients">+ New IPD Patient</button>
     </div>
   </section>
 
@@ -81,7 +112,7 @@
       <table id="itemsTable">
         <thead>
           <tr>
-            <th>Description</th> <!-- Description -->
+            <th>Treatment Dates</th>
             <th>Duration</th>   <!-- Added Duration Column -->
             <th>No. of Sessions</th>  <!-- Renamed Qty to No. of Sessions -->
             <th>Rate (₹)</th>
@@ -92,7 +123,7 @@
         <tbody></tbody>
         </table>
       </div>
-     
+
 
     <button type="button" id="addItemBtn">+ Add Item</button>
   </section>
@@ -181,7 +212,7 @@
         <table class="invoice-table">
             <thead>
             <tr>
-                <th>Description</th> <!-- Description -->
+                <th>Treatment Dates</th>
                 <th>Duration</th>   <!-- Added Duration Column -->
                 <th>No. of Sessions</th>  <!-- Renamed Qty to No. of Sessions -->
                 <th>Rate (₹)</th>
@@ -219,9 +250,7 @@
 
         </div>
 
-        <button id="downloadPdfBtn">Download PDF</button>
-        <button id="backupDriveBtn">Backup to Google Drive</button>
-        <button id="syncLedgerBtn">Sync Ledger (Google Sheets)</button>
+        <button id="printDocBtn">Print Document</button>
 
         <!-- INVOICE HISTORY -->
         <section class="card">
@@ -241,7 +270,343 @@
         </table>
         </section>
 
+    </section>
 
+    <!-- =======================================================
+         TREATMENT PROTOCOL VIEW
+    ======================================================== -->
+    <section id="view-protocol" class="view">
+      <h2>Treatment Protocol</h2>
+
+      <form id="protocol-form">
+        <section class="card">
+          <label>Patient Type</label>
+          <select id="protocolPatientType">
+            <option value="OPD">OPD</option>
+            <option value="IPD">IPD</option>
+          </select>
+
+          <p id="protocolOpdNote" class="patient-type-note">OPD — no profile needed, fill details below.</p>
+
+          <div id="protocolPatientPicker" class="patient-picker" style="display:none;">
+            <label>Select IPD Patient</label>
+            <select id="protocolPatientSelect">
+              <option value="">-- Select Patient --</option>
+            </select>
+            <button type="button" class="link-btn" data-goto="patients">+ New IPD Patient</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Patient Details</h3>
+          <label>Patient Name *</label>
+          <input type="text" id="protocolPatientName" required />
+          <div class="row">
+            <div>
+              <label>Age</label>
+              <input type="number" id="protocolAge" min="0" />
+            </div>
+            <div>
+              <label>Gender</label>
+              <select id="protocolGender">
+                <option value="">Select</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <label>Address</label>
+          <textarea id="protocolAddress"></textarea>
+          <label>Diagnosis</label>
+          <textarea id="protocolDiagnosis"></textarea>
+          <div class="row">
+            <div>
+              <label>Date of Assessment</label>
+              <input type="date" id="protocolAssessmentDate" />
+            </div>
+            <div>
+              <label>Treating Physiotherapist</label>
+              <input type="text" id="protocolPhysio" />
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Prescribed Treatment Protocol</h3>
+          <div class="table-wrapper">
+            <table id="protocolTable">
+              <thead>
+                <tr><th style="width:40px;">#</th><th>Exercise</th><th></th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <button type="button" id="addExerciseBtn">+ Add Exercise</button>
+        </section>
+
+        <section class="card">
+          <h3>Sign &amp; Stamp</h3>
+          <div class="row">
+            <div>
+              <label>Sign by</label>
+              <input type="text" id="protocolSignBy" />
+            </div>
+            <div>
+              <label>Position / Designation</label>
+              <input type="text" id="protocolDesignation" />
+            </div>
+          </div>
+        </section>
+
+        <section class="actions">
+          <button type="submit">Save Treatment Protocol</button>
+        </section>
+      </form>
+
+      <div id="protocol-preview" class="doc-preview"></div>
+      <button id="protocolDownloadBtn" style="display:none;">Download PDF</button>
+
+      <section class="card">
+        <h3>Treatment Protocol History</h3>
+        <table id="protocolHistoryTable">
+          <thead><tr><th>Doc No</th><th>Date</th><th>Patient</th><th>Type</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </section>
+
+    <!-- =======================================================
+         CERTIFICATE VIEW
+    ======================================================== -->
+    <section id="view-certificate" class="view">
+      <h2>Certificate</h2>
+
+      <form id="certificate-form">
+        <section class="card">
+          <label>Patient Type</label>
+          <select id="certPatientType">
+            <option value="OPD">OPD</option>
+            <option value="IPD">IPD</option>
+          </select>
+
+          <p id="certOpdNote" class="patient-type-note">OPD — no profile needed, fill details below.</p>
+
+          <div id="certPatientPicker" class="patient-picker" style="display:none;">
+            <label>Select IPD Patient</label>
+            <select id="certPatientSelect">
+              <option value="">-- Select Patient --</option>
+            </select>
+            <button type="button" class="link-btn" data-goto="patients">+ New IPD Patient</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Patient Details</h3>
+          <label>Patient Name *</label>
+          <input type="text" id="certPatientName" required />
+          <div class="row">
+            <div>
+              <label>Age</label>
+              <input type="number" id="certAge" min="0" />
+            </div>
+            <div>
+              <label>Gender</label>
+              <select id="certGender">
+                <option value="">Select</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <label>Diagnosis</label>
+          <textarea id="certDiagnosis"></textarea>
+        </section>
+
+        <section class="card">
+          <h3>Certificate Type</h3>
+          <select id="certType">
+            <option value="Fitness">Fitness Certificate</option>
+            <option value="Discharge">Discharge Certificate</option>
+          </select>
+
+          <h3 style="margin-top:12px;">Certificate Text</h3>
+          <textarea id="certBody" rows="6" placeholder="Enter the certificate wording..."></textarea>
+
+          <label>Date</label>
+          <input type="date" id="certDate" />
+        </section>
+
+        <section class="card">
+          <h3>Sign &amp; Stamp</h3>
+          <div class="row">
+            <div>
+              <label>Sign by</label>
+              <input type="text" id="certSignBy" />
+            </div>
+            <div>
+              <label>Position / Designation</label>
+              <input type="text" id="certDesignation" />
+            </div>
+          </div>
+        </section>
+
+        <section class="actions">
+          <button type="submit">Save Certificate</button>
+        </section>
+      </form>
+
+      <div id="certificate-preview" class="doc-preview"></div>
+      <button id="certDownloadBtn" style="display:none;">Download PDF</button>
+
+      <section class="card">
+        <h3>Certificate History</h3>
+        <table id="certificateHistoryTable">
+          <thead><tr><th>Doc No</th><th>Date</th><th>Patient</th><th>Type</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </section>
+
+    <!-- =======================================================
+         PATIENTS (IPD) VIEW
+    ======================================================== -->
+    <section id="view-patients" class="view">
+      <h2>Patients (IPD)</h2>
+
+      <section class="card">
+        <h3>New / Edit IPD Patient</h3>
+        <form id="patient-form">
+          <input type="hidden" id="patientId" />
+          <label>Name *</label>
+          <input type="text" id="patientName" required />
+          <div class="row">
+            <div>
+              <label>Age</label>
+              <input type="number" id="patientAge" min="0" />
+            </div>
+            <div>
+              <label>Gender</label>
+              <select id="patientGender">
+                <option value="">Select</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+          <label>Phone</label>
+          <input type="text" id="patientPhone" />
+          <label>Address</label>
+          <textarea id="patientAddress"></textarea>
+          <label>Diagnosis</label>
+          <textarea id="patientDiagnosis"></textarea>
+          <div class="row">
+            <div>
+              <label>Ward / Room</label>
+              <input type="text" id="patientWard" />
+            </div>
+            <div>
+              <label>Assigned Physiotherapist</label>
+              <input type="text" id="patientPhysio" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Admission Date</label>
+              <input type="date" id="patientAdmissionDate" />
+            </div>
+            <div>
+              <label>Discharge Date</label>
+              <input type="date" id="patientDischargeDate" />
+            </div>
+          </div>
+          <section class="actions">
+            <button type="button" id="patientClearBtn">Clear</button>
+            <button type="submit">Save Patient</button>
+          </section>
+        </form>
+      </section>
+
+      <section class="card">
+        <h3>IPD Patient List</h3>
+        <input type="text" id="patientSearch" placeholder="Search by name..." />
+        <table id="patientListTable">
+          <thead><tr><th>Name</th><th>Age/Gender</th><th>Ward</th><th>Admitted</th><th>Billing Total (₹)</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="card" id="patientDetailCard" style="display:none;">
+        <h3>Patient Detail</h3>
+        <div id="patientDetailInfo"></div>
+        <h4 style="margin-top:12px;">Linked Documents</h4>
+        <table id="patientDocsTable">
+          <thead><tr><th>Type</th><th>Doc No</th><th>Date</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </section>
+
+    <!-- =======================================================
+         ADDITIONAL DOCUMENT VIEW
+    ======================================================== -->
+    <section id="view-additional" class="view">
+      <h2>Additional Document</h2>
+      <p style="margin-bottom:12px;">For any one-off document that isn't covered by the app — still gets the EasyWalk header for the owner's sign &amp; stamp. Not saved to history.</p>
+
+      <section class="card">
+        <label>Name of Document</label>
+        <input type="text" id="addDocName" placeholder="e.g. Referral Letter" />
+
+        <label>Content</label>
+        <textarea id="addDocContent" rows="10" placeholder="Enter the document content..."></textarea>
+
+        <label>Sign by</label>
+        <input type="text" id="addDocSignBy" placeholder="e.g. Dr. Name" />
+
+        <label>Position / Designation</label>
+        <input type="text" id="addDocDesignation" placeholder="e.g. Proprietor, Physiotherapist" />
+
+        <section class="actions">
+          <button type="button" id="addDocGenerateBtn">Generate Preview</button>
+        </section>
+      </section>
+
+      <div id="additional-preview" class="doc-preview"></div>
+      <button id="addDocPrintBtn" style="display:none;">Print Document</button>
+    </section>
+
+    <!-- =======================================================
+         SETTINGS VIEW
+    ======================================================== -->
+    <section id="view-settings" class="view">
+      <h2>Settings</h2>
+
+      <section class="card">
+        <h3>Storage Folders</h3>
+        <label>PDF Output Folder</label>
+        <div class="row">
+          <input type="text" id="pdfFolderPath" readonly />
+          <button type="button" id="pickPdfFolderBtn">Choose Folder</button>
+        </div>
+
+        <label>Backup Folder</label>
+        <div class="row">
+          <input type="text" id="backupFolderPath" readonly />
+          <button type="button" id="pickBackupFolderBtn">Choose Folder</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Backup / Restore</h3>
+        <p>Export a full backup of all invoices, documents and patients to the backup folder above, or import a previously exported backup file (e.g. after moving to a new machine).</p>
+        <button type="button" id="exportBackupBtn">Export Backup</button>
+        <button type="button" id="importBackupBtn">Import Backup</button>
+        <p id="backupStatus"></p>
+      </section>
+    </section>
 
   </main>
 
@@ -250,27 +615,20 @@
     <p>© Easy Walk Physical Therapy Rehabilitation</p>
   </footer>
 
-  
-
   <!-- JS FILES -->
   <script src="js/html2pdf.bundle.min.js"></script>
-  <script src="js/dexie.min.js"></script>
   <script src="js/db.js"></script>
+  <script src="js/templates/docHeader.js"></script>
+  <script src="js/pagination.js"></script>
   <script src="js/invoice.js"></script>
-  <script src="js/driveBackup.js"></script>
   <script src="js/pdf.js"></script>
-  <script src="js/sheetsSync.js"></script>
-  <script src="js/sync.js"></script>
-  <script src="js/ui.js"></script> <!-- This should be last -->
-
-
-  <script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js")
-      .then(() => console.log("Service Worker registered"))
-      .catch(err => console.error("SW registration failed", err));
-    }
-    </script>
+  <script src="js/ui.js"></script>
+  <script src="js/patients.js"></script>
+  <script src="js/documents/treatmentProtocol.js"></script>
+  <script src="js/documents/certificate.js"></script>
+  <script src="js/documents/additionalDocument.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/nav.js"></script> <!-- This should be last -->
 
 </body>
 </html>
