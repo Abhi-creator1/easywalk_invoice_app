@@ -20,7 +20,7 @@ const CLINIC = {
 
   pan: "KFJPS7319J",
   udyam: "MH-23-0153661",
-  phone: "+91 7972187511",
+  phone: "+91 8975187511",
   email: "easywalkrehabnsk@gmail.com",
   web: "easywalkphysiorehab.com",
   instagram: "easywalk_physio_rehabilitation",
