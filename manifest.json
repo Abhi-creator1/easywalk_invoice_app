@@ -1,0 +1,20 @@
+{
+  "name": "EasyWalk Documentation",
+  "short_name": "EasyWalk",
+  "description": "Invoices, treatment protocols, certificates and IPD patient records for EasyWalk Physiotherapy and Rehabilitation Centre.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#2457a7",
+  "lang": "en-IN",
+  "icons": [
+    {
+      "src": "assets/logo.png",
+      "sizes": "1600x1600",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

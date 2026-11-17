@@ -1,11 +1,12 @@
 {
   "name": "easywalk-docs",
-  "version": "1.0.0",
-  "description": "EasyWalk Physiotherapy documentation app (invoices, treatment protocols, certificates)",
+  "version": "2.0.0",
+  "description": "EasyWalk Physiotherapy documentation desktop app (invoices, treatment protocols, certificates, IPD patients). Offline Electron build of the web app on master.",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "test": "node tools/run-tests.js"
   },
   "author": "EasyWalk Physiotherapy and Rehabilitation Centre",
   "license": "UNLICENSED",
@@ -21,7 +22,9 @@
       "index.html",
       "css/**/*",
       "js/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "manifest.json",
+      "sw.js"
     ],
     "win": {
       "target": "portable",

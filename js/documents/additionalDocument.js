@@ -1,22 +1,29 @@
 // =======================
 // ADDITIONAL DOCUMENT (one-off, not saved to history)
 // =======================
+let renderedAdditional = null;
+
 function buildAdditionalIntro(doc) {
-  return `<h3 class="doc-title">${escapeHtml(doc.name || "DOCUMENT").toUpperCase()}</h3>`;
+  return '<h3 class="doc-title">' +
+    escapeHtml(String(doc.name || "DOCUMENT").toUpperCase()) + "</h3>";
 }
 
 function renderAdditionalPreview(doc) {
-  const html = buildPaginatedDocument({
+  renderedAdditional = doc;
+
+  document.getElementById("additional-preview").innerHTML = buildPaginatedDocument({
     introHtml: buildAdditionalIntro(doc),
     outroHtml: renderSignStampBlock({ signBy: doc.signBy, designation: doc.designation }),
-    items: [doc.content],
-    renderItem: text => `<p class="cert-body">${escapeHtml(text).replace(/\n/g, "<br/>")}</p>`,
-    itemsFirstPage: 1,
-    itemsPerPage: 1
+    items: splitTextIntoBlocks(doc.content),
+    renderItem: text => '<p class="cert-body">' + escapeMultiline(text) + "</p>"
   });
 
-  document.getElementById("additional-preview").innerHTML = html;
   document.getElementById("addDocPrintBtn").style.display = "inline-block";
+  document.getElementById("addDocDownloadBtn").style.display = "inline-block";
+}
+
+function additionalFilename(doc) {
+  return sanitizeFilenamePart(doc.name) + "_" + todayIso();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -28,8 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
       designation: document.getElementById("addDocDesignation").value
     };
 
-    if (!doc.name || !doc.content) {
-      alert("Please enter a document name and content.");
+    if (!doc.name.trim() || !doc.content.trim()) {
+      toast("Enter a document name and some content.", "error");
       return;
     }
 
@@ -38,12 +45,19 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("addDocPrintBtn").addEventListener("click", () => {
-    const preview = document.getElementById("additional-preview");
-    preview.classList.add("print-target");
+    if (!renderedAdditional) return;
+    printElement(document.getElementById("additional-preview"), {
+      title: additionalFilename(renderedAdditional)
+    });
+  });
 
-    setTimeout(() => {
-      window.print();
-      preview.classList.remove("print-target");
-    }, 100);
+  // This document used to be print-only, which meant it did not work at all on
+  // a phone, where window.print() is unreliable.
+  document.getElementById("addDocDownloadBtn").addEventListener("click", async () => {
+    if (!renderedAdditional) return;
+    await run(() => exportElementToPdf(document.getElementById("additional-preview"), {
+      filename: additionalFilename(renderedAdditional),
+      docType: "additional"
+    }), { failure: "Could not create that PDF." });
   });
 });

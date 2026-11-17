@@ -1,18 +1,23 @@
 // Shared header/footer for non-invoice documents (Treatment Protocol, Certificate, ...)
 // First page gets the full branded blue-band header; continuation pages get a plain text header.
-const CLINIC_NAME = "EASYWALK PHYSIOTHERAPY AND REHABILITATION CENTRE";
-const CLINIC_NAME_PLAIN = "EasyWalk Physiotherapy and Rehabilitation Centre";
+// All clinic details come from js/config/clinic.js.
 
-function renderDocHeader({ first }) {
+function renderDocHeader(options) {
+  const first = options && options.first;
+
   if (first) {
+    const addressHtml = CLINIC.addressLines
+      .map(line => "<p>" + escapeHtml(line) + "</p>")
+      .join("");
+
     return `
       <div class="doc-header doc-header-first">
-        <img src="assets/logo.png" class="doc-logo" />
+        <img src="assets/logo.png" class="doc-logo" alt="" />
         <div class="doc-header-text">
-          <h2>${CLINIC_NAME}</h2>
-          <p>Add: Prabhu Business Centre, Ravishankar Marg, Wadala, Nashik, 422006,</p>
-          <p>PAN: KFJPS7319J, UDYAM: MH-23-0153661 Ph: +91 7972187511, Web: https://easywalkphysiorehab.com</p>
-          <p>E-mail: easywalkrehabnsk@gmail.com Insta: easywalk_physio_rehabilitation</p>
+          <h2>${escapeHtml(CLINIC.name)}</h2>
+          ${addressHtml}
+          <p>PAN: ${escapeHtml(CLINIC.pan)}, UDYAM: ${escapeHtml(CLINIC.udyam)} Ph: ${escapeHtml(CLINIC.phone)}</p>
+          <p>E-mail: ${escapeHtml(CLINIC.email)} Web: ${escapeHtml(CLINIC.web)} Insta: ${escapeHtml(CLINIC.instagram)}</p>
         </div>
       </div>
     `;
@@ -20,18 +25,24 @@ function renderDocHeader({ first }) {
 
   return `
     <div class="doc-header doc-header-continuation">
-      <p>${CLINIC_NAME_PLAIN}</p>
+      <p>${escapeHtml(CLINIC.namePlain)}</p>
     </div>
   `;
 }
 
 // Shared sign + stamp block for the end of any non-invoice document.
-function renderSignStampBlock({ signBy, designation }) {
+function renderSignStampBlock(options) {
+  const opts = options || {};
+  const signBy = escapeHtml(opts.signBy) || "-";
+  const designation = opts.designation
+    ? `<p class="designation">${escapeHtml(opts.designation)}</p>`
+    : "";
+
   return `
     <div class="sign-stamp-block">
       <div class="sign-line">
-        <p><strong>Sign by:</strong> ${escapeHtml(signBy) || "-"}</p>
-        ${designation ? `<p class="designation">${escapeHtml(designation)}</p>` : ""}
+        <p><strong>Sign by:</strong> ${signBy}</p>
+        ${designation}
       </div>
       <div class="stamp-box">Stamp</div>
     </div>

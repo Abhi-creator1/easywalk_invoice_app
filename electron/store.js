@@ -17,6 +17,10 @@ const DEFAULTS = {
   settings: { pdfFolder: "", backupFolder: "" }
 };
 
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function dataDir(userDataPath) {
   const dir = path.join(userDataPath, "data");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -29,20 +33,37 @@ function filePath(userDataPath, storeName) {
 
 function readStore(userDataPath, storeName) {
   const file = filePath(userDataPath, storeName);
-  if (!fs.existsSync(file)) {
-    return JSON.parse(JSON.stringify(DEFAULTS[storeName]));
-  }
+  if (!fs.existsSync(file)) return clone(DEFAULTS[storeName]);
+
+  // An I/O failure (locked file, bad permissions) is surfaced rather than
+  // swallowed: returning an empty list here would look like "no data yet",
+  // and the next save would then write that emptiness over the real file.
+  const raw = fs.readFileSync(file, "utf-8");
+
   try {
-    return JSON.parse(fs.readFileSync(file, "utf-8"));
+    return JSON.parse(raw);
   } catch (err) {
-    console.error(`Failed to read ${storeName}:`, err);
-    return JSON.parse(JSON.stringify(DEFAULTS[storeName]));
+    // Unparseable JSON means a previous write was interrupted. Move the file
+    // aside instead of leaving it to be overwritten, so nothing is lost and it
+    // can still be recovered by hand.
+    const quarantined = file + ".corrupt-" + Date.now();
+    try {
+      fs.renameSync(file, quarantined);
+      console.error("Unreadable " + storeName + " file moved to " + quarantined, err);
+    } catch (renameErr) {
+      console.error("Unreadable " + storeName + " file could not be set aside", renameErr);
+    }
+    return clone(DEFAULTS[storeName]);
   }
 }
 
+// Written to a temporary file and then renamed into place. A rename is atomic,
+// so a crash or power cut can never leave a half-written store behind.
 function writeStore(userDataPath, storeName, data) {
   const file = filePath(userDataPath, storeName);
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+  const temp = file + ".tmp";
+  fs.writeFileSync(temp, JSON.stringify(data, null, 2), "utf-8");
+  fs.renameSync(temp, file);
 }
 
 module.exports = { STORE_FILES, DEFAULTS, dataDir, filePath, readStore, writeStore };
